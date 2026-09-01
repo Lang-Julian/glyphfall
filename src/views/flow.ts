@@ -10,7 +10,7 @@ import type { MapNode } from '../game/map.js';
 import type { App, View } from '../ui/app.js';
 import { loadSave } from '../meta/store.js';
 import { createCardPicker, createMenu } from './common.js';
-import { createCombatView } from './combatview.js';
+import { createCombatHelp, createCombatView } from './combatview.js';
 import { createEventView } from './eventview.js';
 import { createGameOverView } from './gameover.js';
 import { createMapView } from './mapview.js';
@@ -56,7 +56,10 @@ export function resumeRun(app: App): boolean {
 export function startRun(app: App, seed: string, depth: number): void {
   app.beginRun(seed, depth);
   app.reset(mapView(app));
-  app.toast(`seed ${seed}`);
+  // A first-time player has no way to know the one rule the game is built on,
+  // and a rule you have to go looking for is a rule most people never find.
+  if (app.profile.runs === 0) app.push(createCombatHelp());
+  else app.toast(`seed ${seed}`);
 }
 
 function mapView(app: App): View {
