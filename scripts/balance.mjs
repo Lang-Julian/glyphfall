@@ -16,14 +16,28 @@ const maxDepth = Number(process.argv[3] ?? 4);
 
 console.log(`glyphfall balance — ${runs} runs per cell\n`);
 
-console.log('character     depth 0   depth 2   depth 4');
+// A single seed set moves a character's win rate by several points, which is
+// enough to fail a gate on noise alone. Three sets, averaged.
+const SEED_SETS = ['a', 'b', 'c'];
+const average = (depth, character) => {
+  let wins = 0;
+  let floors = 0;
+  for (const set of SEED_SETS) {
+    const batch = simulateBatch(runs, depth, `ci-${set}-${character}`, character);
+    wins += batch.winRate;
+    floors += batch.medianFloors;
+  }
+  return { winRate: wins / SEED_SETS.length, medianFloors: floors / SEED_SETS.length };
+};
+
+console.log(`character     depth 0   depth 2   depth 4   (${runs * SEED_SETS.length} runs per cell)`);
 console.log('------------  -------   -------   -------');
 const perCharacter = new Map();
 for (const character of CHARACTERS) {
   const cells = [0, 2, 4].map((depth) => {
-    const batch = simulateBatch(runs, depth, `ci-${character.id}`, character.id);
-    if (depth === 0) perCharacter.set(character.id, batch);
-    return `${(batch.winRate * 100).toFixed(0)}%`.padStart(7);
+    const result = average(depth, character.id);
+    if (depth === 0) perCharacter.set(character.id, result);
+    return `${(result.winRate * 100).toFixed(0)}%`.padStart(7);
   });
   console.log(`${character.id.padEnd(13)} ${cells.join('   ')}`);
 }

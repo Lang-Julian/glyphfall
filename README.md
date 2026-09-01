@@ -237,18 +237,18 @@ node scripts/balance.mjs 300
 ```
 
 ```
-character   depth 0   depth 2   depth 4
-archivist       31%       10%        7%
-kindler         31%       24%       18%
-warden          32%       21%       16%
+character   depth 0   depth 2   depth 4      (600 runs per cell)
+archivist       25%       13%        7%
+kindler         32%       20%       14%
+warden          34%       23%       15%
 ```
 
 It runs in CI and fails the build if the game becomes unwinnable, trivial, or if act 1
 starts killing people. It found real problems during development: three-enemy packs
 appearing on floor two, an act-2 difficulty cliff, an Echo-copies-Echo infinite
 recursion, and a first pass at the Warden that won **84%** of its runs. It also settled
-the question that mattered for three characters — they now sit within two points of each
-other, which no amount of playtesting intuition would have reached.
+the question that mattered for three characters — they now sit inside a nine-point band,
+which no amount of playtesting intuition would have reached.
 
 One balance change came straight out of it and stayed: from turn five, every enemy gains
 a point of Strength each round. Without a clock, pure defence beats anything that does
