@@ -3,7 +3,8 @@ import { relicDef } from '../content/relics.js';
 import { addCard, addDraught, addRelic, buildShop, removeCard, type ShopItem } from '../game/run.js';
 import type { App, View } from '../ui/app.js';
 import { drawBottomBar, drawTopBar } from '../ui/app.js';
-import { box, cardLine, truncate, wrap } from '../ui/draw.js';
+import { box, cardLine, wrap } from '../ui/draw.js';
+import { cursorList } from '../ui/widgets.js';
 import type { Theme } from '../ui/theme.js';
 import { BOLD, sgr } from '../ui/theme.js';
 import { createCardList } from './common.js';
@@ -19,7 +20,7 @@ function itemGlyph(t: Theme, item: ShopItem): string {
   switch (item.kind) {
     case 'relic': return t.icon(relicDef(item.id).glyph);
     case 'draught': return t.icon(draughtDef(item.id).glyph);
-    case 'removal': return '×';
+    case 'removal': return '-';
     default: return t.glyph('star');
   }
 }
@@ -110,20 +111,20 @@ export function createShopView(onLeave: (app: App) => void): View {
       s.put(x + 2, y + 1, 'She sells what the floor above no longer needs.', t.fg('faint'));
 
       const listTop = y + 3;
-      list.forEach((item, i) => {
-        const iy = listTop + i;
-        if (iy >= y + h - detailLines.length - 3) return;
-        const active = i === cursor;
-        const afford = run.gold >= item.price && !item.sold;
-        const label = item.kind === 'card' && item.card
-          ? cardLine(t, item.card, w - 22).text
-          : `${itemGlyph(t, item)} ${item.name}`;
-
-        s.put(x + 2, iy, active ? t.glyph('arrow') : ' ', sgr(t.fg('accent'), BOLD));
-        s.put(x + 4, iy, truncate(item.sold ? `${label}   sold` : label, w - 16),
-          item.sold ? t.fg('faint') : active ? sgr(t.fg('title'), BOLD) : t.fg('text'));
-        s.putRight(x + w - 3, iy, `${t.glyph('coin')} ${item.price}`,
-          sgr(t.fg(item.sold ? 'faint' : afford ? 'gold' : 'bad'), BOLD));
+      cursorList(s, t, {
+        x: x + 2, y: listTop, width: w - 5, rows: list.length, cursor, scroll: 0,
+        items: list.map((item) => {
+          const afford = run.gold >= item.price && !item.sold;
+          const label = item.kind === 'card' && item.card
+            ? cardLine(t, item.card, w - 22).text
+            : `${itemGlyph(t, item)} ${item.name}`;
+          return {
+            text: item.sold ? `${label}   sold` : label,
+            trailing: `${t.glyph('coin')} ${item.price}`,
+            trailingStyle: sgr(t.fg(item.sold ? 'faint' : afford ? 'gold' : 'bad'), BOLD),
+            disabled: item.sold,
+          };
+        }),
       });
 
       const ruleY = y + h - detailLines.length - 2;

@@ -1,3 +1,4 @@
+import { CHARACTERS } from './content/characters.js';
 import { dailySeed, normaliseSeed, randomSeed } from './core/seed.js';
 import { validateContent } from './game/run.js';
 import { dataDir, loadProfile, loadSave } from './meta/store.js';
@@ -6,7 +7,7 @@ import {
   detectAppearance, detectColorLevel, detectUnicode,
   type Appearance, type ColorLevel,
 } from './ui/theme.js';
-import { resumeRun, showTitle, startRun } from './views/flow.js';
+import { chooseCharacter, resumeRun, showTitle, startRun } from './views/flow.js';
 import { version } from './version.js';
 
 /**
@@ -26,6 +27,7 @@ interface Args {
   noColor: boolean;
   noAnim: boolean;
   appearance?: Appearance;
+  character?: string;
   resume: boolean;
   help: boolean;
   showVersion: boolean;
@@ -65,6 +67,13 @@ export function parseArgs(argv: readonly string[]): Args {
         break;
       }
       case '--ascii': a.ascii = true; break;
+      case '-C': case '--character': {
+        const v = value()?.toLowerCase();
+        const match = CHARACTERS.find((c) => c.id === v || c.name.toLowerCase().endsWith(v ?? ''));
+        if (!match) a.errors.push(`--character must be one of: ${CHARACTERS.map((c) => c.id).join(', ')}`);
+        else { a.character = match.id; a.jumpIn = true; }
+        break;
+      }
       case '--light': a.appearance = 'light'; break;
       case '--dark': a.appearance = 'dark'; break;
       case '--no-color': case '--no-colour': a.noColor = true; break;
@@ -93,6 +102,7 @@ const HELP = `
   options
     -s, --seed <text>   any text; the same seed always plays the same run
         --daily         today's shared seed
+    -C, --character     archivist | kindler | warden
     -d, --depth <n>     difficulty, 0-20 (default 0)
     -c, --continue      resume the run in progress
         --light         colours for a light terminal background
@@ -186,7 +196,8 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   const started = app.start();
 
   if (args.resume) resumeRun(app);
-  else if (args.jumpIn) startRun(app, opts.seed, opts.depth);
+  else if (args.character) startRun(app, opts.seed, opts.depth, args.character);
+  else if (args.jumpIn) chooseCharacter(app, opts.seed, opts.depth);
   else showTitle(app);
 
   await started;

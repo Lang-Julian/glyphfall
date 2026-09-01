@@ -2,7 +2,7 @@ import { STATUSES, STATUS_ORDER } from '../content/statuses.js';
 import { cardDef, cardName, describeCard } from '../content/cards.js';
 import type { Card, Combatant, StatusId, Suit } from '../core/types.js';
 import { Screen } from './screen.js';
-import { BOLD, DIM, REVERSE, SUIT_COLOR, SUIT_GLYPH, sgr, type ColorName, type Theme } from './theme.js';
+import { BOLD, SUIT_COLOR, SUIT_GLYPH, sgr, type ColorName, type Theme } from './theme.js';
 
 /** Shared widgets. Nothing here knows what a game is; it draws boxes. */
 
@@ -264,16 +264,3 @@ export function keyHint(
   }
 }
 
-export function centreLines(
-  s: Screen, t: Theme, y: number, lines: readonly string[], style: string,
-): void {
-  lines.forEach((line, i) => s.putCenter(0, s.width, y + i, line, style));
-}
-
-export function highlightRow(s: Screen, t: Theme, x: number, y: number, w: number): void {
-  s.tint(x, y, w, sgr(t.fg('title'), t.bg('shade'), BOLD));
-}
-
-export const REV = REVERSE;
-export const B = BOLD;
-export const D = DIM;

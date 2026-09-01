@@ -4,7 +4,7 @@ import { cardDef, cardName, cardVars, makeCard } from '../content/cards.js';
 import { enemyDef } from '../content/enemies.js';
 import { relicDef } from '../content/relics.js';
 import type {
-  Amount, Card, CardType, Combatant, Effect, EnemyDef, EnemyMove, Intent,
+  Amount, Card, CardType, Combatant, Effect, EnemyMove, Intent,
   RelicHook, StatusId, Suit,
 } from '../core/types.js';
 import { WILD_SUIT } from '../core/types.js';
@@ -24,6 +24,16 @@ import { WILD_SUIT } from '../core/types.js';
  * ========================================================================== */
 
 export const MAX_CHAIN = 9;
+
+/**
+ * From this turn onward, every living enemy gains 1 Strength each round.
+ *
+ * Without it, pure defence is a winning strategy against anything that does not
+ * scale, and a fight the player cannot lose is a fight with no decisions in it.
+ * Five turns is comfortably longer than a well-played fight and comfortably
+ * shorter than a stall.
+ */
+export const PRESSURE_TURN = 5;
 export const BASE_ENERGY = 3;
 export const BASE_HAND_SIZE = 5;
 export const HAND_LIMIT = 10;
@@ -96,6 +106,8 @@ export interface CombatState {
     chainPulse: number;
     /** Damage from the most recent hit on the player, for the floating number. */
     lastHit: number;
+    /** Damage most recently dealt to each enemy, for the floating numbers. */
+    enemyDamage: Record<string, number>;
     /** Enemy currently acting, highlighted during the enemy phase. */
     actor: string | null;
   };
@@ -233,7 +245,10 @@ export function startCombat(o: StartCombatOptions): CombatState {
     log: [], over: null,
     tier: o.tier, encounterName: o.encounterName,
     rng,
-    fx: { shake: 0, hitEnemy: {}, hitPlayer: 0, chainPulse: 0, lastHit: 0, actor: null },
+    fx: {
+      shake: 0, hitEnemy: {}, hitPlayer: 0, chainPulse: 0,
+      lastHit: 0, enemyDamage: {}, actor: null,
+    },
   };
 
   if (has(s, RULE_RELICS.thornyFoes)) {
@@ -346,8 +361,13 @@ export function stepEnemyPhase(s: CombatState): boolean {
 
   // End of the round: statuses tick, block resets, next intents are telegraphed.
   s.fx.actor = null;
+  const pressure = s.turn >= PRESSURE_TURN;
+  if (pressure && s.turn === PRESSURE_TURN) {
+    say(s, 'The floor grows impatient. They are getting stronger.', 'bad');
+  }
   for (const en of livingEnemies(s)) {
     tickStatuses(s, en, 'enemy');
+    if (pressure) addStatus(en, 'strength', 1);
     en.block = 0;
     telegraph(s, en);
   }
@@ -471,7 +491,7 @@ export interface Playability {
   cost: number;
 }
 
-export function cardCost(s: CombatState, card: Card): number {
+export function cardCost(_s: CombatState, card: Card): number {
   return cardDef(card.defId).cost;
 }
 
@@ -613,6 +633,13 @@ function resolveEffect(s: CombatState, fx: Effect, ctx: Ctx): void {
     case 'damage-per-chain': {
       const target = resolveTarget(s, ctx.targetIndex);
       if (target) dealPlayerDamage(s, target, amt(fx.amount, v) * s.chain, { isAttack: true });
+      break;
+    }
+    case 'damage-all-per-chain': {
+      const per = amt(fx.amount, v) * s.chain;
+      if (per > 0) {
+        for (const en of livingEnemies(s)) dealPlayerDamage(s, en, per, { isAttack: true });
+      }
       break;
     }
     case 'damage-per-card': {
@@ -808,7 +835,10 @@ function damageEnemyDirect(
     remaining -= absorbed;
   }
   target.hp = Math.max(0, target.hp - remaining);
-  s.fx.hitEnemy[target.id] = 1;
+  // Eight frames is long enough to read a number and short enough that a
+  // multi-hit card still reads as several separate hits.
+  s.fx.hitEnemy[target.id] = 8;
+  s.fx.enemyDamage[target.id] = (s.fx.enemyDamage[target.id] ?? 0) + remaining;
   if (source) say(s, `${target.name} takes ${remaining} from ${source}.`, 'player');
   if (target.hp === 0) say(s, `${target.name} falls.`, 'good');
 }
@@ -1058,6 +1088,7 @@ export function previewCard(s: CombatState, handIndex: number, targetIndex: numb
         out.hits = Math.max(out.hits ?? 1, amt(fx.hits, vars, 1));
         break;
       }
+      case 'damage-all-per-chain':
       case 'damage-per-chain': {
         let n = amt(fx.amount, vars) * chainAfter + statusOf(s.player, 'strength');
         if (statusOf(s.player, 'weak') > 0) n = Math.floor(n * 0.75);
@@ -1141,6 +1172,9 @@ export function cloneCombat(s: CombatState): CombatState {
     firedChainHooks: new Set(s.firedChainHooks),
     log: [],
     rng: s.rng.clone(),
-    fx: { shake: 0, hitEnemy: {}, hitPlayer: 0, chainPulse: 0, lastHit: 0, actor: null },
+    fx: {
+      shake: 0, hitEnemy: {}, hitPlayer: 0, chainPulse: 0,
+      lastHit: 0, enemyDamage: {}, actor: null,
+    },
   };
 }

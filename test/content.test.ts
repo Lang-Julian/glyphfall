@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { CARDS, POOL, STARTER_DECK, cardDef, cardVars, describeCard, makeCard } from '../src/content/cards.js';
+import { CARDS, POOL, cardDef, cardVars, describeCard, makeCard, poolFor } from '../src/content/cards.js';
+import { CHARACTERS } from '../src/content/characters.js';
 import { DRAUGHTS } from '../src/content/draughts.js';
 import { ENCOUNTERS, ENEMIES, enemyDef } from '../src/content/enemies.js';
 import { EVENTS } from '../src/content/events.js';
@@ -49,10 +50,50 @@ test('upgrades change at least one number and never make a card worse to read', 
   }
 });
 
-test('starter deck is exactly ten cards and teaches all four suits', () => {
-  assert.equal(STARTER_DECK.length, 10);
-  const suits = new Set(STARTER_DECK.map((id) => cardDef(id).suit));
-  assert.deepEqual([...suits].sort(), ['ember', 'frost', 'iron', 'void']);
+test('every character starts with a legal, playable ten-card deck', () => {
+  for (const character of CHARACTERS) {
+    assert.equal(character.deck.length, 10, `${character.id} deck size`);
+    const suits = new Set(character.deck.map((id: string) => cardDef(id).suit));
+    assert.ok(suits.size >= 3, `${character.id} only touches ${suits.size} suits`);
+    if (character.affinity) {
+      const counts = new Map<string, number>();
+      for (const id of character.deck) {
+        const suit = cardDef(id).suit;
+        counts.set(suit, (counts.get(suit) ?? 0) + 1);
+      }
+      const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]![0];
+      assert.equal(top, character.affinity,
+        `${character.id} leans ${character.affinity} but its deck is mostly ${top}`);
+    }
+    for (const id of character.deck) {
+      const d = cardDef(id);
+      assert.ok(!d.unplayable, `${character.id} starts with an unplayable card: ${id}`);
+      assert.ok(d.cost <= 1, `${character.id} starts with a ${d.cost}-cost card: ${id}`);
+    }
+    assert.ok(character.maxHp >= 60 && character.maxHp <= 100, `${character.id} hp ${character.maxHp}`);
+    assert.ok(character.blurb.length > 0 && character.playstyle.length > 0);
+    assert.equal(character.art.length, 4, `${character.id} art must be 4 lines`);
+  }
+});
+
+test('characters are actually different from one another', () => {
+  const decks = CHARACTERS.map((c) => c.deck.join(','));
+  assert.equal(new Set(decks).size, CHARACTERS.length, 'two characters share a deck');
+  assert.equal(new Set(CHARACTERS.map((c) => c.startingRelic)).size, CHARACTERS.length);
+  assert.equal(new Set(CHARACTERS.map((c) => c.maxHp)).size, CHARACTERS.length);
+});
+
+test('every character has signature cards, and can still see the shared pool', () => {
+  for (const character of CHARACTERS) {
+    const pool = poolFor(character.id);
+    const signatures = pool.filter((c) => c.classes?.includes(character.id));
+    assert.ok(signatures.length >= 2, `${character.id} has ${signatures.length} signature cards`);
+    assert.ok(pool.length >= 40, `${character.id} pool is only ${pool.length} cards`);
+    for (const card of pool) {
+      assert.ok(!card.classes || card.classes.includes(character.id),
+        `${card.id} leaked into ${character.id}'s pool`);
+    }
+  }
 });
 
 test('the reward pool contains no starters or curses', () => {
@@ -83,7 +124,7 @@ test('every enemy referenced by an encounter exists', () => {
   }
 });
 
-test('every act has an opener, a mid pool, an elite and exactly one boss', () => {
+test('every act has an opener, a mid pool, elites and several bosses', () => {
   for (const act of [1, 2, 3]) {
     const inAct = ENCOUNTERS.filter((e) => e.act === act);
     const normals = inAct.filter((e) => e.tier === 'normal');
@@ -91,7 +132,23 @@ test('every act has an opener, a mid pool, an elite and exactly one boss', () =>
     assert.ok(openers.length >= 2, `act ${act} has ${openers.length} openers`);
     assert.ok(normals.length >= 5, `act ${act} has ${normals.length} normal encounters`);
     assert.ok(inAct.filter((e) => e.tier === 'elite').length >= 2, `act ${act} needs elites`);
-    assert.equal(inAct.filter((e) => e.tier === 'boss').length, 1, `act ${act} boss count`);
+    // Several bosses per act is what stops the third run feeling like the first.
+    assert.ok(inAct.filter((e) => e.tier === 'boss').length >= 3, `act ${act} needs bosses`);
+  }
+});
+
+test('bosses across an act are in the same weight class', () => {
+  for (const act of [1, 2, 3]) {
+    const totals = ENCOUNTERS
+      .filter((e) => e.act === act && e.tier === 'boss')
+      .map((e) => ({
+        id: e.id,
+        hp: e.enemies.reduce((sum, id) => sum + enemyDef(id).hp[0], 0),
+      }));
+    const lo = Math.min(...totals.map((x) => x.hp));
+    const hi = Math.max(...totals.map((x) => x.hp));
+    assert.ok(hi <= lo * 1.6,
+      `act ${act} bosses range ${lo}-${hi}: ${totals.map((x) => `${x.id} ${x.hp}`).join(', ')}`);
   }
 });
 

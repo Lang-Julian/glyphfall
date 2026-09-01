@@ -13,6 +13,7 @@ import { createMapView } from '../views/mapview.js';
 import { createRestView } from '../views/restview.js';
 import { createShopView } from '../views/shopview.js';
 import { createTitleView } from '../views/title.js';
+import { createCharacterSelect } from '../views/characterselect.js';
 import type { App, View } from './app.js';
 import { setAsciiMode } from './draw.js';
 import { Screen } from './screen.js';
@@ -29,7 +30,8 @@ import { makeTheme, type Appearance, type ColorLevel, type Theme } from './theme
  */
 
 export const PREVIEW_SCREENS = [
-  'title', 'map', 'combat', 'enemy-turn', 'reward', 'shop', 'rest', 'event', 'gameover',
+  'title', 'characters', 'map', 'combat', 'enemy-turn', 'reward', 'shop', 'rest',
+  'event', 'gameover',
 ] as const;
 export type PreviewScreen = (typeof PREVIEW_SCREENS)[number];
 
@@ -101,6 +103,7 @@ function buildApp(
 function viewsFor(run: RunState, rng: Rng): Record<PreviewScreen, () => View> {
   return {
     title: () => createTitleView({ onNewRun: noop, onContinue: noop }),
+    characters: () => createCharacterSelect(noop),
     map: () => createMapView({ onEnter: noop }),
     combat: () => createCombatView({ onWin: noop, onLose: noop }),
     'enemy-turn': () => createCombatView({ onWin: noop, onLose: noop }),

@@ -17,6 +17,8 @@ import { createMapView } from './mapview.js';
 import { createRestView } from './restview.js';
 import { createShopView } from './shopview.js';
 import { createTitleView } from './title.js';
+import { createCharacterSelect } from './characterselect.js';
+import { DEFAULT_CHARACTER } from '../content/characters.js';
 
 /**
  * Game flow.
@@ -29,7 +31,7 @@ import { createTitleView } from './title.js';
 
 export function showTitle(app: App): void {
   app.reset(createTitleView({
-    onNewRun: (a, seed, depth) => startRun(a, seed, depth),
+    onNewRun: (a, seed, depth) => chooseCharacter(a, seed, depth),
     onContinue: (a) => { if (!resumeRun(a)) a.toast('No run to continue.'); },
   }));
 }
@@ -45,7 +47,7 @@ export function resumeRun(app: App): boolean {
   const save = loadSave();
   if (!save) return false;
   app.adoptRun(save.run, save.resumeNode);
-  app.reset(mapView(app));
+  app.reset(mapView());
   if (save.resumeNode) {
     const node = save.run.map.nodes[save.resumeNode];
     if (node) resolveNode(app, node, true);
@@ -53,16 +55,23 @@ export function resumeRun(app: App): boolean {
   return true;
 }
 
-export function startRun(app: App, seed: string, depth: number): void {
-  app.beginRun(seed, depth);
-  app.reset(mapView(app));
+/** Every new run goes through character select; it is the first real choice. */
+export function chooseCharacter(app: App, seed: string, depth: number): void {
+  app.push(createCharacterSelect((a, character) => startRun(a, seed, depth, character)));
+}
+
+export function startRun(
+  app: App, seed: string, depth: number, character = DEFAULT_CHARACTER,
+): void {
+  app.beginRun(seed, depth, character);
+  app.reset(mapView());
   // A first-time player has no way to know the one rule the game is built on,
   // and a rule you have to go looking for is a rule most people never find.
   if (app.profile.runs === 0) app.push(createCombatHelp());
   else app.toast(`seed ${seed}`);
 }
 
-function mapView(app: App): View {
+function mapView(): View {
   return createMapView({
     onEnter: (a, node) => {
       if (!a.stepInto(node.id)) return;
@@ -74,7 +83,7 @@ function mapView(app: App): View {
 export function backToMap(app: App): void {
   // The node is done: from here a resumed run starts on the map, not inside it.
   app.clearPendingNode();
-  app.reset(mapView(app));
+  app.reset(mapView());
   app.autosave();
 }
 
@@ -252,10 +261,10 @@ function onCombatLost(app: App): void {
   app.reset(createGameOverView(run, 'lost', gameOverActions(run)));
 }
 
-function gameOverActions(run: { seed: string; depth: number }) {
+function gameOverActions(run: { seed: string; depth: number; character: string }) {
   return {
-    onRetrySeed: (a: App) => startRun(a, run.seed, run.depth),
-    onNewRun: (a: App) => startRun(a, randomSeed(), run.depth),
+    onRetrySeed: (a: App) => startRun(a, run.seed, run.depth, run.character),
+    onNewRun: (a: App) => chooseCharacter(a, randomSeed(), run.depth),
     onTitle: (a: App) => showTitle(a),
   };
 }

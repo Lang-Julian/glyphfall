@@ -57,6 +57,12 @@ export interface CardDef {
   power?: readonly RelicHook[];
   /** Flavour, shown in the inspector only. */
   flavour?: string;
+  /**
+   * Characters this card can appear for. Omitted means every character.
+   * Only a handful of signature cards are restricted — a pool split three ways
+   * would make each character's rewards repetitive rather than distinct.
+   */
+  classes?: readonly string[];
 }
 
 /** A card as it exists inside one particular deck. */
@@ -94,6 +100,7 @@ export type Effect =
   | { kind: 'chain'; amount: Amount }
   /** Damage that scales with the current chain beyond the standard +1/point. */
   | { kind: 'damage-per-chain'; amount: Amount }
+  | { kind: 'damage-all-per-chain'; amount: Amount }
   | { kind: 'block-per-chain'; amount: Amount }
   /** Damage equal to `amount` per card already played this turn. */
   | { kind: 'damage-per-card'; amount: Amount }

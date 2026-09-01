@@ -2,6 +2,7 @@ import type { App, View } from '../ui/app.js';
 import { drawBottomBar, drawTopBar } from '../ui/app.js';
 import { CARD_H_FULL, CARD_W, box, cardLine, drawCard, truncate, wrap } from '../ui/draw.js';
 import { BOLD, sgr, type ColorName } from '../ui/theme.js';
+import { cursorList } from '../ui/widgets.js';
 import { cardDef, cardName, describeCard } from '../content/cards.js';
 import type { Card } from '../core/types.js';
 import type { Key } from '../ui/term.js';
@@ -241,22 +242,13 @@ export function createCardList(o: CardListOptions): View {
       box(s, t, x, y, w, h, { title: `${o.title} (${sorted.length})`, fill: true });
       if (o.prompt) s.put(x + 2, y + 1, truncate(o.prompt, w - 4), t.fg('dim'));
 
-      if (cursor < scroll) scroll = cursor;
-      if (cursor >= scroll + rows) scroll = cursor - rows + 1;
-
-      for (let i = 0; i < rows; i++) {
-        const idx = scroll + i;
-        const card = sorted[idx];
-        if (!card) break;
-        const line = cardLine(t, card, w - 6);
-        const active = idx === cursor;
-        s.put(x + 2, y + 3 + i, active ? t.glyph('arrow') : ' ', sgr(t.fg('accent'), BOLD));
-        s.put(x + 4, y + 3 + i, line.text, active ? sgr(t.fg('title'), BOLD) : line.style);
-      }
-
-      if (sorted.length > rows) {
-        s.putRight(x + w - 2, y + h - 2, `${cursor + 1}/${sorted.length}`, t.fg('faint'));
-      }
+      scroll = cursorList(s, t, {
+        x: x + 2, y: y + 3, width: w - 5, rows, cursor, scroll,
+        items: sorted.map((card) => {
+          const line = cardLine(t, card, w - 8);
+          return { text: line.text, style: line.style };
+        }),
+      });
 
       drawBottomBar(app, [
         ['↑↓', 'move'],

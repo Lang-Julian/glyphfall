@@ -1,17 +1,16 @@
 import { cardDef, cardName, describeCard } from '../content/cards.js';
 import { draughtDef } from '../content/draughts.js';
 import { enemyDef } from '../content/enemies.js';
-import { relicDef } from '../content/relics.js';
 import { STATUSES } from '../content/statuses.js';
 import {
   MAX_CHAIN, beginEnemyPhase, canPlay, displayIntent, incomingDamage, livingEnemies,
   playCard, previewCard, stepEnemyPhase, useDraughtEffects, wouldChain,
-  type CombatState, type EnemyState,
+  type CombatState,
 } from '../game/combat.js';
 import type { App, View } from '../ui/app.js';
 import { drawBottomBar, drawTopBar } from '../ui/app.js';
 import {
-  CARD_H_FULL, CARD_H_MID, CARD_H_SMALL, CARD_W, box, drawCard, drawChain, gauge,
+  CARD_H_FULL, CARD_H_MID, CARD_H_SMALL, CARD_W, drawCard, drawChain, gauge,
   putStatuses, truncate, wrap,
 } from '../ui/draw.js';
 import { BOLD, REVERSE, SUIT_GLYPH, sgr, type ColorName } from '../ui/theme.js';
@@ -50,7 +49,7 @@ interface Layout {
  * region that looks better with slack in it. Nothing overlaps and nothing
  * clips, from 78x22 upward.
  */
-function layout(width: number, height: number): Layout {
+function layout(height: number): Layout {
   const handRows = height >= 31 ? CARD_H_FULL : height >= 27 ? CARD_H_MID : CARD_H_SMALL;
   // Enough log to see a whole enemy turn. One line hid it completely, which is
   // exactly the failure this height is chosen to prevent.
@@ -81,6 +80,11 @@ export function createCombatView(o: CombatViewOptions): View {
   let target = 0;
   let resolved = false;
   let beat = 0;
+  /** Frames left on the end-of-combat pause, so a win lands before the
+   *  reward screen wipes it away. Any key skips it. */
+  let outcomeBeat = 0;
+  /** Frames left on the "you still have energy" confirmation. */
+  let endTurnArmed = 0;
 
   const clampSelection = (c: CombatState) => {
     cardIndex = c.hand.length === 0 ? 0 : Math.max(0, Math.min(c.hand.length - 1, cardIndex));
@@ -90,11 +94,17 @@ export function createCombatView(o: CombatViewOptions): View {
     }
   };
 
+  const finish = (app: App, c: CombatState): void => {
+    if (c.over === 'win') o.onWin(app);
+    else o.onLose(app);
+  };
+
+  /** Marks the combat as over and starts the pause before the next screen. */
   const settle = (app: App, c: CombatState) => {
     if (resolved || !c.over) return;
     resolved = true;
-    if (c.over === 'win') o.onWin(app);
-    else o.onLose(app);
+    outcomeBeat = app.opts.animations ? 20 : 0;
+    if (outcomeBeat === 0) finish(app, c);
   };
 
   const play = (app: App, c: CombatState, idx: number, tgt: number) => {
@@ -119,7 +129,14 @@ export function createCombatView(o: CombatViewOptions): View {
      */
     tick(app) {
       const c = app.combat;
-      if (!c || c.over || c.phase !== 'enemy') return;
+      if (!c) return;
+      if (endTurnArmed > 0) endTurnArmed--;
+      if (resolved) {
+        if (outcomeBeat > 0 && --outcomeBeat === 0) finish(app, c);
+        app.requestRender();
+        return;
+      }
+      if (c.over || c.phase !== 'enemy') return;
       if (!app.opts.animations) {
         while (stepEnemyPhase(c)) { /* no pauses when animation is off */ }
         app.requestRender();
@@ -138,13 +155,27 @@ export function createCombatView(o: CombatViewOptions): View {
       if (!c) return;
       clampSelection(c);
       const { screen: s, theme: t } = app;
-      const L = layout(s.width, s.height);
+      const L = layout(s.height);
 
       drawTopBar(app);
       drawEncounterLine(app, c);
       drawEnemies(app, c, L, target, cardIndex);
       s.put(0, L.ruleY, t.glyph('h').repeat(s.width), t.fg('borderDim'));
       drawPlayerBar(app, c, L.playerY);
+
+      if (c.over) {
+        // A beat on the result, so a won fight registers as a won fight.
+        const won = c.over === 'win';
+        const y = L.handY + Math.floor(L.handRows / 2) - 1;
+        s.putCenter(0, s.width, y, won ? 'the floor is quiet' : 'you fall',
+          sgr(t.fg(won ? 'good' : 'bad'), BOLD));
+        s.putCenter(0, s.width, y + 2,
+          won ? `${c.encounterName} cleared` : c.encounterName, t.fg('dim'));
+        drawLog(app, c, L.logY, L.logRows);
+        drawBottomBar(app, [['', won ? 'press any key to continue' : 'press any key']]);
+        return;
+      }
+
       drawSelectedCard(app, c, L.detailY, cardIndex, target);
       drawHand(app, c, L.handY, L.handRows, cardIndex);
       drawLog(app, c, L.logY, L.logRows);
@@ -153,18 +184,23 @@ export function createCombatView(o: CombatViewOptions): View {
         drawBottomBar(app, [['', 'their turn — watch what they do']]);
         return;
       }
-      // Drop the least important hints rather than letting the bar clip.
+      // Five hints, not eight. The rest are one keystroke away under `?`, and a
+      // key bar you have to read is a key bar nobody reads.
       const hints: (readonly [string, string])[] = [
-        ['←→', 'card'], ['↑↓', 'target'], ['↵', 'play'], ['e', 'end turn'],
-        ['d', 'inspect'], ['p', 'draught'], ['v', 'piles'], ['?', 'help'],
+        ['←→', 'card'], ['↑↓', 'target'], ['↵', 'play'], ['e', 'end turn'], ['?', 'more'],
       ];
-      drawBottomBar(app, s.width >= 94 ? hints : hints.slice(0, s.width >= 82 ? 6 : 4));
+      drawBottomBar(app, s.width >= 76 ? hints : hints.slice(0, 4));
     },
 
     onKey(app, key) {
       const c = app.combat;
       if (!c) return;
-      if (c.over) { settle(app, c); return; }
+      if (c.over) {
+        // Any key skips the end-of-combat beat.
+        if (resolved && outcomeBeat > 0) { outcomeBeat = 0; finish(app, c); }
+        else settle(app, c);
+        return;
+      }
       clampSelection(c);
       const n = Number(key.name);
 
@@ -184,15 +220,25 @@ export function createCombatView(o: CombatViewOptions): View {
         case 'up': case 'k': target = cycleTarget(c, target, -1); break;
         case 'down': case 'j': case 'tab': target = cycleTarget(c, target, 1); break;
         case 'enter': case 'space': play(app, c, cardIndex, target); break;
-        case 'e':
+        case 'e': {
+          // Ending a turn with energy left is almost always a misclick, and it
+          // costs a whole turn. Ask once — but only once, and only when there
+          // is genuinely something left to do.
+          const playable = c.hand.some((_, i) => canPlay(c, i).ok);
+          if (endTurnArmed === 0 && c.energy > 0 && playable) {
+            endTurnArmed = 40;
+            app.toast(`${c.energy} energy left — press e again to end the turn`);
+            break;
+          }
+          endTurnArmed = 0;
           beginEnemyPhase(c);
           beat = 0;
           cardIndex = 0;
           settle(app, c);
           break;
-        case 'd': openInspect(app, c, cardIndex, target); break;
-        case 'p': openDraughts(app, c, target); break;
-        case 'v': openPiles(app, c); break;
+        }
+        case 'd': case 'v': openInspect(app, c, cardIndex, target); break;
+        case 'p': openDraughts(app, target); break;
         case '?': app.push(createCombatHelp()); break;
         case 'q': case 'escape': openPause(app); break;
         default:
@@ -240,6 +286,7 @@ function drawEnemies(
 
     const name = truncate(dead ? `${en.name} — down` : en.name, slotW - 4);
     const acting = c.fx.actor === en.id;
+    const justHit = c.fx.enemyDamage[en.id] ?? 0;
     const nameStyle = dead ? t.fg('faint')
       : flash ? sgr(t.fg('invert'), t.bg('bad'), BOLD)
       : acting ? sgr(t.fg('invert'), t.bg('warn'), BOLD)
@@ -264,6 +311,11 @@ function drawEnemies(
     const barW = Math.max(6, Math.min(slotW - 6 - label.length, 16));
     const bx = x + Math.max(1, Math.floor((slotW - (barW + 1 + label.length)) / 2));
     gauge(s, t, bx, row(5), barW, en.hp, en.maxHp, 'hp', label);
+
+    // The damage a hit actually did, right where it landed.
+    if (justHit > 0) {
+      s.putCenter(x, slotW, row(4), ` -${justHit} `, sgr(t.fg('invert'), t.bg('ember'), BOLD));
+    }
 
     const intent = displayIntent(c, en);
     s.putCenter(x, slotW, row(6), truncate(intentText(intent), slotW - 2), intentStyle(app, intent));
@@ -474,32 +526,61 @@ function drawLog(app: App, c: CombatState, y: number, h: number): void {
 
 /* --------------------------------------------------------------- overlays -- */
 
+/**
+ * One overlay for "what is this and what is left".
+ *
+ * Card details and pile contents used to be two separate keys showing two
+ * separate boxes; they answer the same question at different scales, so they
+ * are one screen now.
+ */
 function openInspect(app: App, c: CombatState, index: number, target: number): void {
   const card = c.hand[index];
-  if (!card) return;
-  const d = cardDef(card.defId);
-  const preview = previewCard(c, index, target);
-  const body = [
-    ...wrap(describeCard(card), 60),
-    '',
-    `suit ${d.suit}    type ${d.type}    cost ${d.cost}    ${d.rarity}`,
-    preview ? `chain after playing: ${preview.chainAfter}${preview.breaks ? '   (breaks the chain)' : ''}` : '',
-    preview?.damage !== undefined
-      ? `damage: ${preview.damage}${preview.hits && preview.hits > 1 ? ` x${preview.hits} = ${preview.damage * preview.hits}` : ''}`
-      : '',
-    preview?.block !== undefined ? `block: ${preview.block}` : '',
-    d.exhaust ? 'Exhausts when played.' : '',
-    d.flavour ? `"${d.flavour}"` : '',
-  ].filter(Boolean);
+  const names = (cards: readonly { defId: string; upgrades: number }[]): string =>
+    cards.length === 0 ? 'empty' : cards.map((x) => cardName(x as never)).sort().join(', ');
+
+  const cardBody = card ? (() => {
+    const d = cardDef(card.defId);
+    const preview = previewCard(c, index, target);
+    return [
+      ...wrap(describeCard(card), 62),
+      `${d.suit}  ${t0('·')}  ${d.type}  ${t0('·')}  ${d.cost} energy  ${t0('·')}  ${d.rarity}`,
+      preview ? `chain after playing: ${preview.chainAfter}${preview.breaks ? '   (this breaks it)' : ''}` : '',
+      preview?.damage !== undefined
+        ? `damage ${preview.damage}${preview.hits && preview.hits > 1 ? ` x${preview.hits} = ${preview.damage * preview.hits}` : ''}`
+        : '',
+      preview?.block !== undefined ? `block ${preview.block}` : '',
+      d.exhaust ? 'Exhausts when played.' : '',
+      d.flavour ? `"${d.flavour}"` : '',
+      '',
+    ].filter(Boolean);
+  })() : ['Your hand is empty.', ''];
 
   app.push(createMenu({
-    id: 'inspect', title: cardName(card), body, overlay: true,
+    id: 'inspect',
+    title: card ? cardName(card) : 'Piles',
+    overlay: true,
+    body: [
+      ...cardBody,
+      `DRAW  ${c.draw.length}  (shuffled — order hidden)`,
+      ...wrap(names(c.draw), 62).slice(0, 2),
+      `DISCARD  ${c.discard.length}`,
+      ...wrap(names(c.discard), 62).slice(0, 2),
+      ...(c.exhaust.length > 0
+        ? [`EXHAUSTED  ${c.exhaust.length}  (gone for this fight)`,
+           ...wrap(names(c.exhaust), 62).slice(0, 1)]
+        : []),
+    ],
     items: [{ label: 'Close', onSelect: (a) => a.pop() }],
     onCancel: (a) => a.pop(),
   }));
 }
 
-function openDraughts(app: App, c: CombatState, target: number): void {
+/** Plain separator that survives ASCII mode via the screen sanitiser. */
+function t0(ch: string): string {
+  return ch;
+}
+
+function openDraughts(app: App, target: number): void {
   const run = app.run;
   if (!run) return;
   if (run.draughts.length === 0) { app.toast('No draughts to drink.'); return; }
@@ -521,27 +602,6 @@ function openDraughts(app: App, c: CombatState, target: number): void {
         },
       };
     }),
-    onCancel: (a) => a.pop(),
-  }));
-}
-
-function openPiles(app: App, c: CombatState): void {
-  const names = (cards: readonly { defId: string; upgrades: number }[]) =>
-    cards.length === 0 ? 'empty' : cards.map((x) => cardName(x as never)).sort().join(', ');
-
-  app.push(createMenu({
-    id: 'piles', title: 'Piles', overlay: true,
-    body: [
-      `Draw (${c.draw.length}) — shuffled, order hidden until drawn`,
-      ...wrap(names(c.draw), 62).slice(0, 3),
-      '',
-      `Discard (${c.discard.length})`,
-      ...wrap(names(c.discard), 62).slice(0, 3),
-      '',
-      `Exhausted (${c.exhaust.length}) — gone for this fight`,
-      ...wrap(names(c.exhaust), 62).slice(0, 2),
-    ],
-    items: [{ label: 'Close', onSelect: (a) => a.pop() }],
     onCancel: (a) => a.pop(),
   }));
 }
@@ -581,12 +641,14 @@ export function createCombatHelp(): View {
       'It is meant to be spent — gain exactly as much as you need, and put',
       'the rest of your energy into attacking. (The Anchor effect keeps it.)',
       '',
-      '←→ pick card    ↑↓ pick target    ↵ play    e end turn',
-      '1-9 play directly    d inspect    p draught    v piles',
+      'KEYS',
+      '  ←→  pick a card          ↵   play it',
+      '  ↑↓  pick a target        e   end your turn',
+      '  1-9 play that card       d   inspect card and piles',
+      '  p   drink a draught      q   pause / save / quit',
     ],
     items: [{ label: 'Close', onSelect: (a) => a.pop() }],
     onCancel: (a) => a.pop(),
   });
 }
 
-export { box };

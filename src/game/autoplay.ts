@@ -12,6 +12,7 @@ import {
   removeCard, restHealAmount, treasureReward, upgradableCards, type RunState,
 } from './run.js';
 import { availableNodes } from './map.js';
+import { DEFAULT_CHARACTER } from '../content/characters.js';
 import type { EventDef, EventOption, EventOutcome } from '../content/events.js';
 import type { Card, Suit } from '../core/types.js';
 
@@ -31,6 +32,7 @@ import type { Card, Suit } from '../core/types.js';
 
 export interface SimResult {
   seed: string;
+  character: string;
   depth: number;
   outcome: 'won' | 'lost';
   act: number;
@@ -43,6 +45,8 @@ export interface SimResult {
 }
 
 export interface SimOptions {
+  /** Which character to play. Defaults to the Archivist. */
+  character?: string;
   /** Aborts a run that exceeds this many combat turns; catches infinite loops. */
   turnBudget?: number;
   /** Optional narration, for debugging balance without a debugger. */
@@ -50,7 +54,7 @@ export interface SimOptions {
 }
 
 export function simulateRun(seed: string, depth = 0, o: SimOptions = {}): SimResult {
-  const { run, rng } = newRun(seed, depth);
+  const { run, rng } = newRun(seed, depth, o.character ?? DEFAULT_CHARACTER);
   const budget = o.turnBudget ?? 4000;
   const trace = o.trace ?? (() => {});
   let turnsUsed = 0;
@@ -136,6 +140,7 @@ export function simulateRun(seed: string, depth = 0, o: SimOptions = {}): SimRes
 
   return {
     seed, depth,
+    character: run.character,
     outcome: run.outcome === 'won' ? 'won' : 'lost',
     act: run.act,
     floors: run.stats.floorsCleared,
@@ -417,7 +422,9 @@ function chooseNode(run: RunState, choices: ReturnType<typeof availableNodes>, r
 }
 
 /** Convenience: run a batch and report the aggregate. */
-export function simulateBatch(count: number, depth = 0, seedPrefix = 'sim'): {
+export function simulateBatch(
+  count: number, depth = 0, seedPrefix = 'sim', character = DEFAULT_CHARACTER,
+): {
   results: SimResult[];
   winRate: number;
   medianFloors: number;
@@ -425,7 +432,7 @@ export function simulateBatch(count: number, depth = 0, seedPrefix = 'sim'): {
 } {
   const results: SimResult[] = [];
   for (let i = 0; i < count; i++) {
-    results.push(simulateRun(`${seedPrefix}-${i}`, depth));
+    results.push(simulateRun(`${seedPrefix}-${i}`, depth, { character }));
   }
   const wins = results.filter((r) => r.outcome === 'won').length;
   const floors = results.map((r) => r.floors).sort((a, b) => a - b);

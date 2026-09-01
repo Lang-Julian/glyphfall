@@ -68,22 +68,20 @@ incoming total and how much of it gets through, so you never have to guess.
 ## What it looks like
 
 ```
- GLYPHFALL  Act 1/3 · The Upper Shelves           ∞ ∞ ◆  hp 61/78  ¤ 264  floor 2
+ GLYPHFALL  The Archivist · Act 1/3 · The Upper Sh∞ ∞ ◆  hp 61/78  ¤ 264  floor 2
                                     Moth & Wisp
-
         Ledger Moth                 Cinder Hound                 Glass Wisp
           \  ^  /                      /\_/\                        ***
            \/|\/                      ( >.< )                      * o *
            /\|/\                       \___/                        ***
-          /  v  \                      /] [\                         |
-    █████████░░░░ 23/32         █████████████ 15/15         █████████████ 18/18
+          /  -9 \                      /] [\                         |
+   ████████████░░░░ 23/32      ████████████████ 15/15      ████████████████ 18/18
     attacks 5 · blocks 6             attacks 6                   attacks 5
                                                                   Thorns 3
 
 
-
 ────────────────────────────────────────────────────────────────────────────────────
- hp ███████████░░░ 61/78  ◇ ██░ 2   CHAIN █░░░░░░░░ +1  ◆               incoming 16
+ hp ███████████░░░ 61/78  ⊕ 0  ◇ ██░ 2   CHAIN █░░░░░░░░ +1  ◆          incoming 16
                                                turn 1  ·  8 to draw  ·  1 discarded
  ▲ Ward  1e  Gain 6 block.                                         breaks the chain
      ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐
@@ -92,6 +90,8 @@ incoming total and how much of it gets through, so you never have to guess.
     ▌│Gain 6      │▐│Deal 8      │ │Gain 1      │ │Gain 4      │ │Deal 14     │   2›
      │block.      │ │damage.…    │ │Strength an…│ │block, plus…│ │damage.     │
      └──── 1 ─────┘ └──── 2 ─────┘ └──── 3 ─────┘ └──── 4 ─────┘ └──── 5 ─────┘
+
+ — Moth & Wisp —
  You play Strike.  chain 1
   ←→  card   ↑↓  target   ↵  play   e  end turn   d  inspect   p  draught
 ```
@@ -108,23 +108,41 @@ turn-based game ends up feeling like it is cheating.
 
 ---
 
+## Three ways to hold the same deck
+
+| | | |
+|---|---|---|
+| **The Warden** | 86 HP · *Ballast* | Outlast, then turn the wall into a weapon. Four block every fight, one card fewer each turn. **Start here.** |
+| **The Archivist** | 78 HP · *First Link* | The chain, learned properly. Every turn starts one link in, and reaching chain 4 draws a card. |
+| **The Kindler** | 72 HP · *Ashheart* | Long ember chains, thin margins. Every second Ember card in a turn hits everything for 8 and heals you 2. |
+
+Each has its own ten-card starting deck and two signature rares only it can find.
+Everything else in the pool is shared, so no character runs out of interesting rewards.
+
+---
+
 ## Controls
+
+Nine keys, and the bar only ever shows five of them.
 
 | | |
 |---|---|
-| `←` `→` or `h` `l` | pick a card |
-| `↑` `↓` or `k` `j` | pick a target |
-| `↵` / `space` | play it |
+| `←` `→` | pick a card |
+| `↑` `↓` | pick a target |
+| `↵` | play it |
 | `1`–`9` | play that card directly |
 | `e` | end turn |
-| `d` | inspect the highlighted card |
+| `d` | inspect the card, and see your piles |
 | `p` | drink a draught |
-| `v` | look through your piles |
-| `c` / `r` | your deck / your relics (on the map) |
 | `?` | how the chain works |
 | `q` | pause, save, quit |
 
-Arrow keys and vim keys both work everywhere. `Ctrl-C` saves and exits cleanly.
+On the map, `c` opens your deck and `r` your relics. On the results screen, `y` copies
+the run summary. Vim keys work everywhere arrows do, and `Ctrl-C` saves and exits cleanly.
+
+Keys that spend a turn or leave a screen ignore your terminal's auto-repeat, so leaning
+on `e` cannot burn through four turns before you let go. Navigation still repeats,
+because holding an arrow to scan a hand is exactly what you want it to do.
 
 ---
 
@@ -140,7 +158,7 @@ Three acts. Each is a branching map you climb once, ending in a boss.
 | `$` shop | buy cards, relics, draughts — **or pay to delete a card** |
 | `∩` rest | heal 30%, or permanently upgrade one card |
 | `?` unknown | a choice with a price attached |
-| `Ø` boss | beat it to descend |
+| `Ø` boss | beat it to descend — **three per act**, drawn at random |
 
 Every act guarantees an easy opening fight, a treasure, and a rest before the boss, so a
 run is never decided by a map roll. Clearing an act grants max HP, a heal and a free
@@ -156,9 +174,16 @@ buying one, and "take nothing" is a real option on every card reward.
 ```sh
 glyphfall --seed ember-lantern-412   # any text works; same seed, same run
 glyphfall --daily                    # today's run, identical for everyone
+glyphfall --character kindler        # skip the select screen
 glyphfall --depth 4                  # +28% enemy HP, -16 max HP
 glyphfall --continue                 # resume the saved run
 glyphfall --light                    # colours for a light terminal
+```
+
+Every run ends with a score and a line built to be pasted at someone:
+
+```
+glyphfall · kindler · ember-lantern-412 · d2 · won 3/3 · chain 8 · 1913 pts
 ```
 
 Every random decision in a run — the map, shop stock, enemy moves, card offers — flows
@@ -191,9 +216,9 @@ glyphfall --help
 
 ## What's in it
 
-**53 cards** · **19 enemies** in **28 hand-authored encounters** · **25 relics** ·
-**12 events** · **7 draughts** · **3 acts**, **3 bosses**, **6 elites** ·
-**0 runtime dependencies**.
+**3 characters** · **59 cards** (6 of them character-signature) · **27 enemies** in
+**37 hand-authored encounters** · **9 bosses**, three per act, drawn at random ·
+**27 relics** · **18 events** · **7 draughts** · **0 runtime dependencies**.
 
 Every count above is asserted by the test suite, along with the shape of the content:
 each suit has enough commons to build around, each act has a soft opener and a boss,
@@ -212,18 +237,22 @@ node scripts/balance.mjs 300
 ```
 
 ```
-depth   win%   median floor   reached act 3   avg best chain
-    0   16.7             25             73%              7.1
-    1   15.8             22             53%              6.7
-    2    7.5             18             46%              6.5
-    3    7.5             18             42%              6.3
-    4    3.3             18             25%              6.2
+character   depth 0   depth 2   depth 4
+archivist       31%       10%        7%
+kindler         31%       24%       18%
+warden          32%       21%       16%
 ```
 
 It runs in CI and fails the build if the game becomes unwinnable, trivial, or if act 1
 starts killing people. It found real problems during development: three-enemy packs
-appearing on floor two, and an act-2 difficulty cliff that no amount of playtesting
-intuition had flagged.
+appearing on floor two, an act-2 difficulty cliff, an Echo-copies-Echo infinite
+recursion, and a first pass at the Warden that won **84%** of its runs. It also settled
+the question that mattered for three characters — they now sit within two points of each
+other, which no amount of playtesting intuition would have reached.
+
+One balance change came straight out of it and stayed: from turn five, every enemy gains
+a point of Strength each round. Without a clock, pure defence beats anything that does
+not scale, and a fight you cannot lose has no decisions in it.
 
 ---
 

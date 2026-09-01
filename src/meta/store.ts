@@ -1,7 +1,8 @@
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import type { RunState } from '../game/run.js';
+import { SAVE_VERSION, type RunState } from '../game/run.js';
+import { scoreRun } from '../game/score.js';
 
 /**
  * Persistence.
@@ -21,6 +22,7 @@ export interface Profile {
   bestDepth: number;
   bestChain: number;
   bestFloor: number;
+  bestScore: number;
   totalFightsWon: number;
   fastestWinMs: number | null;
   /** Seeds already completed, so the daily can only be scored once. */
@@ -37,12 +39,13 @@ export interface Profile {
   history: {
     seed: string; depth: number; act: number; floor: number;
     outcome: 'won' | 'lost'; bestChain: number; at: number;
+    character: string; score: number;
   }[];
 }
 
 const EMPTY_PROFILE: Profile = {
   version: 1,
-  runs: 0, wins: 0, bestDepth: 0, bestChain: 0, bestFloor: 0,
+  runs: 0, wins: 0, bestDepth: 0, bestChain: 0, bestFloor: 0, bestScore: 0,
   totalFightsWon: 0, fastestWinMs: null, dailiesDone: [],
   settings: {
     ascii: false, noColor: false, animations: true, confirmEndTurn: false,
@@ -98,6 +101,7 @@ export function saveProfile(profile: Profile, dir = dataDir()): void {
 
 export function recordRun(profile: Profile, run: RunState, outcome: 'won' | 'lost'): Profile {
   const elapsed = Date.now() - run.stats.startedAt;
+  const score = scoreRun(run, outcome).total;
   const next: Profile = {
     ...profile,
     runs: profile.runs + 1,
@@ -105,13 +109,15 @@ export function recordRun(profile: Profile, run: RunState, outcome: 'won' | 'los
     bestDepth: outcome === 'won' ? Math.max(profile.bestDepth, run.depth) : profile.bestDepth,
     bestChain: Math.max(profile.bestChain, run.stats.bestChain),
     bestFloor: Math.max(profile.bestFloor, run.stats.floorsCleared),
+    bestScore: Math.max(profile.bestScore, score),
     totalFightsWon: profile.totalFightsWon + run.stats.fightsWon,
     fastestWinMs: outcome === 'won'
       ? Math.min(profile.fastestWinMs ?? Number.POSITIVE_INFINITY, elapsed)
       : profile.fastestWinMs,
     history: [
       { seed: run.seed, depth: run.depth, act: run.act, floor: run.stats.floorsCleared,
-        outcome, bestChain: run.stats.bestChain, at: Date.now() },
+        outcome, bestChain: run.stats.bestChain, at: Date.now(),
+        character: run.character, score },
       ...profile.history,
     ].slice(0, 25),
   };
@@ -138,7 +144,7 @@ export function savePath(dir = dataDir()): string {
 export function loadSave(dir = dataDir()): SaveFile | null {
   const raw = readJson<SaveFile | null>(savePath(dir), null);
   if (!raw || typeof raw !== 'object' || !raw.run) return null;
-  if (raw.run.version !== 1) return null;
+  if (raw.run.version !== SAVE_VERSION) return null;
   return raw;
 }
 

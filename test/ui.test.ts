@@ -208,3 +208,13 @@ test('the banner fits or refuses', () => {
     for (const ch of line) assert.ok(ch.charCodeAt(0) < 128);
   }
 });
+
+/* ------------------------------------------------------------ key repeat -- */
+
+test('holding a key produces a burst the app has to recognise', () => {
+  // A terminal sends auto-repeat as ordinary keypresses, often several in one
+  // chunk. The decoder must report each of them; suppression is the app's job.
+  const burst = decode('eeeee');
+  assert.equal(burst.length, 5);
+  assert.ok(burst.every((k) => k.name === 'e'));
+});

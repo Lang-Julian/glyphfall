@@ -13,6 +13,11 @@ import type { ReadStream, WriteStream } from 'node:tty';
 export interface Key {
   /** Normalised name: 'up', 'enter', 'escape', 'a', '1', 'ctrl-c', … */
   name: string;
+  /**
+   * True when this keypress came from the terminal's auto-repeat rather than
+   * from a finger. Set by the application, not by the decoder.
+   */
+  repeat?: boolean;
   /** The literal character, when the key produced one. */
   ch: string;
   ctrl: boolean;

@@ -101,6 +101,53 @@ export const ENEMIES: readonly EnemyDef[] = [
     ],
   }),
 
+  e({
+    id: 'quiet-twin-a', name: 'The Quiet Sister', glyph: 'Ø', tier: 'boss', acts: [1],
+    hp: [60, 60],
+    art: ['  .-----.  ', ' ( o   . ) ', '  \\_____/  ', '   /   \\   '],
+    flavour: 'One of them was always going to be the loud one.',
+    moves: [
+      { id: 'reach', weight: 3, maxStreak: 2, intent: { kind: 'attack', damage: 10 }, effects: [{ kind: 'damage', amount: 10 }] },
+      { id: 'lean', weight: 2, maxStreak: 1, intent: { kind: 'buff', note: 'Strength 3 to both' }, effects: [
+        { kind: 'status', who: 'all-enemies', status: 'strength', amount: 3 },
+      ] },
+      { id: 'clasp', weight: 2, fromTurn: 3, intent: { kind: 'attack', damage: 5, hits: 3 }, effects: [{ kind: 'damage', amount: 5, hits: 3 }] },
+    ],
+  }),
+  e({
+    id: 'quiet-twin-b', name: 'The Loud Sister', glyph: 'Ø', tier: 'boss', acts: [1],
+    hp: [60, 60],
+    art: ['  .-----.  ', ' ( .   o ) ', '  \\vvvvv/  ', '   /   \\   '],
+    moves: [
+      { id: 'shout', weight: 3, maxStreak: 2, intent: { kind: 'attack', damage: 13 }, effects: [{ kind: 'damage', amount: 13 }] },
+      { id: 'brace', weight: 2, maxStreak: 1, intent: { kind: 'block', block: 14, note: 'and her sister' }, effects: [
+        { kind: 'block', amount: 14 },
+      ] },
+      { id: 'shatter', weight: 2, fromTurn: 2, everyTurn: 2, intent: { kind: 'debuff', note: 'Frail 3 · Weak 2' }, effects: [
+        { kind: 'status', who: 'target', status: 'frail', amount: 3 },
+        { kind: 'status', who: 'target', status: 'weak', amount: 2 },
+      ] },
+    ],
+  }),
+  e({
+    id: 'first-reader', name: 'The First Reader', glyph: 'Ø', tier: 'boss', acts: [1],
+    hp: [118, 118],
+    art: [' .-------. ', ' |\\ o o /| ', ' | \\___/ | ', ' \\_______/ '],
+    flavour: 'It read the archive once, cover to cover, and has been correcting it since.',
+    moves: [
+      { id: 'recite', weight: 3, maxStreak: 2, intent: { kind: 'attack', damage: 11 }, effects: [{ kind: 'damage', amount: 11 }] },
+      { id: 'footnote', weight: 2, maxStreak: 1, intent: { kind: 'debuff', note: 'adds Doubt' }, effects: [
+        { kind: 'add-card', defId: 'doubt', to: 'discard' },
+        { kind: 'block', amount: 8 },
+      ] },
+      { id: 'errata', weight: 2, fromTurn: 2, intent: { kind: 'attack', damage: 4, hits: 4 }, effects: [{ kind: 'damage', amount: 4, hits: 4 }] },
+      { id: 'revision', weight: 3, fromTurn: 4, belowHp: 0.5, intent: { kind: 'attack', damage: 16, note: 'Strength 2' }, effects: [
+        { kind: 'damage', amount: 16 },
+        { kind: 'status', who: 'self', status: 'strength', amount: 2 },
+      ] },
+    ],
+  }),
+
   /* ================================================================ ACT 2 == */
   e({
     id: 'slag-golem', name: 'Slag Golem', glyph: 'g', tier: 'normal', acts: [2],
@@ -194,6 +241,41 @@ export const ENEMIES: readonly EnemyDef[] = [
     ],
   }),
 
+  e({
+    id: 'rendering-press', name: 'The Rendering Press', glyph: 'Ø', tier: 'boss', acts: [2],
+    hp: [158, 158],
+    art: ['[=========]', '|  |   |  |', '|__|___|__|', ' ||     || '],
+    flavour: 'It does not care what you were. It cares what you will be pressed into.',
+    moves: [
+      { id: 'compress', weight: 3, maxStreak: 2, intent: { kind: 'attack', damage: 17 }, effects: [{ kind: 'damage', amount: 17 }] },
+      { id: 'plate-up', weight: 2, maxStreak: 1, intent: { kind: 'block', block: 24, note: 'Strength 3' }, effects: [
+        { kind: 'block', amount: 24 },
+        { kind: 'status', who: 'self', status: 'strength', amount: 3 },
+      ] },
+      { id: 'roll', weight: 2, fromTurn: 2, intent: { kind: 'attack', damage: 6, hits: 3, note: 'Frail 2' }, effects: [
+        { kind: 'damage', amount: 6, hits: 3 },
+        { kind: 'status', who: 'target', status: 'frail', amount: 2 },
+      ] },
+      { id: 'full-weight', weight: 3, fromTurn: 5, belowHp: 0.4, intent: { kind: 'attack', damage: 30 }, effects: [{ kind: 'damage', amount: 30 }] },
+    ],
+  }),
+  e({
+    id: 'choirmaster', name: 'The Choirmaster', glyph: 'Ø', tier: 'boss', acts: [2],
+    hp: [140, 140],
+    art: ['   \\ | /   ', '  ( ~o~ )  ', '  /|   |\\  ', '   |   |   '],
+    flavour: 'He conducts. They bite. It has worked for a long time.',
+    moves: [
+      { id: 'cue', weight: 3, maxStreak: 2, intent: { kind: 'buff', note: 'Strength 3 to all' }, effects: [
+        { kind: 'status', who: 'all-enemies', status: 'strength', amount: 3 },
+      ] },
+      { id: 'descant', weight: 3, maxStreak: 2, intent: { kind: 'attack', damage: 15 }, effects: [{ kind: 'damage', amount: 15 }] },
+      { id: 'reprise', weight: 2, fromTurn: 3, everyTurn: 3, intent: { kind: 'debuff', note: 'calls another voice' }, effects: [
+        { kind: 'status', who: 'all-enemies', status: 'regen', amount: 6 },
+        { kind: 'block', amount: 12 },
+      ] },
+    ],
+  }),
+
   /* ================================================================ ACT 3 == */
   e({
     id: 'void-lamprey', name: 'Void Lamprey', glyph: 'l', tier: 'normal', acts: [3],
@@ -269,6 +351,58 @@ export const ENEMIES: readonly EnemyDef[] = [
       { id: 'zero', weight: 4, fromTurn: 6, belowHp: 0.35, maxStreak: 1, intent: { kind: 'attack', damage: 32 }, effects: [{ kind: 'damage', amount: 32 }] },
     ],
   }),
+
+  e({
+    id: 'the-unwritten', name: 'The Unwritten', glyph: 'Ø', tier: 'boss', acts: [3],
+    hp: [212, 212],
+    art: ['  _______  ', ' /       \\ ', '|  .   .  |', ' \\_______/ '],
+    flavour: 'A page that was never filled in, and has opinions about that.',
+    opener: [{ status: 'strength', amount: 2 }],
+    moves: [
+      { id: 'blank', weight: 3, maxStreak: 2, intent: { kind: 'attack', damage: 18 }, effects: [{ kind: 'damage', amount: 18 }] },
+      { id: 'assert', weight: 3, maxStreak: 1, intent: { kind: 'buff', note: 'Strength 4' }, effects: [
+        { kind: 'status', who: 'self', status: 'strength', amount: 4 },
+      ] },
+      { id: 'overwrite', weight: 2, fromTurn: 2, intent: { kind: 'attack', damage: 7, hits: 3 }, effects: [{ kind: 'damage', amount: 7, hits: 3 }] },
+      { id: 'final-draft', weight: 4, fromTurn: 5, intent: { kind: 'attack', damage: 12, hits: 2, note: 'Weak 2' }, effects: [
+        { kind: 'damage', amount: 12, hits: 2 },
+        { kind: 'status', who: 'target', status: 'weak', amount: 2 },
+      ] },
+    ],
+  }),
+  e({
+    id: 'the-margin', name: 'The Margin', glyph: 'Ø', tier: 'boss', acts: [3],
+    hp: [126, 126],
+    art: [' |       | ', ' |  o o  | ', ' |  ---  | ', ' |       | '],
+    flavour: 'Everything important was written here, in the space left over.',
+    moves: [
+      { id: 'annotate', weight: 3, maxStreak: 2, intent: { kind: 'attack', damage: 16 }, effects: [{ kind: 'damage', amount: 16 }] },
+      { id: 'sustain', weight: 2, maxStreak: 1, intent: { kind: 'buff', note: 'Regen 10 to all' }, effects: [
+        { kind: 'status', who: 'all-enemies', status: 'regen', amount: 10 },
+      ] },
+      { id: 'crowd', weight: 2, fromTurn: 2, intent: { kind: 'attack', damage: 6, hits: 3, note: 'adds Doubt' }, effects: [
+        { kind: 'damage', amount: 6, hits: 3 },
+        { kind: 'add-card', defId: 'doubt', to: 'discard' },
+      ] },
+    ],
+  }),
+  e({
+    id: 'the-gloss', name: 'The Gloss', glyph: 'Ø', tier: 'boss', acts: [3],
+    hp: [92, 92],
+    art: ['   /---\\   ', '  | . . |  ', '  |  ^  |  ', '   \\___/   '],
+    opener: [{ status: 'thorns', amount: 4 }],
+    moves: [
+      { id: 'explain', weight: 3, maxStreak: 2, intent: { kind: 'attack', damage: 13 }, effects: [{ kind: 'damage', amount: 13 }] },
+      { id: 'shore-up', weight: 2, maxStreak: 1, intent: { kind: 'block', block: 20, note: 'Thorns 4' }, effects: [
+        { kind: 'block', amount: 20 },
+        { kind: 'status', who: 'self', status: 'thorns', amount: 4 },
+      ] },
+      { id: 'digress', weight: 2, fromTurn: 2, everyTurn: 2, intent: { kind: 'debuff', note: 'Frail 3 · you discard 2' }, effects: [
+        { kind: 'status', who: 'target', status: 'frail', amount: 3 },
+        { kind: 'discard', amount: 2, random: true },
+      ] },
+    ],
+  }),
 ];
 
 const BY_ID = new Map(ENEMIES.map((x) => [x.id, x]));
@@ -307,7 +441,9 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
   { id: 'a1-moth-wisp', name: 'Moth & Wisp', enemies: ['ledger-moth', 'glass-wisp'], act: 1, tier: 'normal', minFight: 3 },
   { id: 'a1-e-auditor', name: 'The Auditor', enemies: ['the-auditor'], act: 1, tier: 'elite' },
   { id: 'a1-e-warden', name: 'Molten Warden', enemies: ['molten-warden'], act: 1, tier: 'elite' },
-  { id: 'a1-boss', name: 'The Hollow Bell', enemies: ['hollow-bell'], act: 1, tier: 'boss' },
+  { id: 'a1-boss-bell', name: 'The Hollow Bell', enemies: ['hollow-bell'], act: 1, tier: 'boss' },
+  { id: 'a1-boss-twins', name: 'The Quiet Twins', enemies: ['quiet-twin-a', 'quiet-twin-b'], act: 1, tier: 'boss' },
+  { id: 'a1-boss-reader', name: 'The First Reader', enemies: ['first-reader'], act: 1, tier: 'boss' },
   // Act 2
   { id: 'a2-golem', name: 'Slag Golem', enemies: ['slag-golem'], act: 2, tier: 'normal', minFight: 0 },
   { id: 'a2-chorus', name: 'Chorus of Teeth', enemies: ['chorus-tooth', 'chorus-tooth', 'chorus-tooth'], act: 2, tier: 'normal', minFight: 2 },
@@ -318,7 +454,9 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
   { id: 'a2-e-copperjaw', name: 'Copperjaw', enemies: ['copperjaw'], act: 2, tier: 'elite' },
   { id: 'a2-e-wraith', name: 'Archivist Wraith', enemies: ['archivist-wraith'], act: 2, tier: 'elite' },
   { id: 'a2-e-warden', name: 'Warden & Hounds', enemies: ['molten-warden', 'cinder-hound'], act: 2, tier: 'elite' },
-  { id: 'a2-boss', name: 'The Grammar', enemies: ['the-grammar'], act: 2, tier: 'boss' },
+  { id: 'a2-boss-grammar', name: 'The Grammar', enemies: ['the-grammar'], act: 2, tier: 'boss' },
+  { id: 'a2-boss-press', name: 'The Rendering Press', enemies: ['rendering-press'], act: 2, tier: 'boss' },
+  { id: 'a2-boss-choir', name: 'The Choirmaster', enemies: ['choirmaster', 'chorus-tooth', 'chorus-tooth'], act: 2, tier: 'boss' },
   // Act 3
   { id: 'a3-lamprey', name: 'Void Lamprey', enemies: ['void-lamprey'], act: 3, tier: 'normal', minFight: 0 },
   { id: 'a3-seraph', name: 'Ash Seraph', enemies: ['ash-seraph'], act: 3, tier: 'normal', minFight: 0 },
@@ -328,7 +466,12 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
   { id: 'a3-e-anvil', name: 'The Anvil', enemies: ['the-anvil'], act: 3, tier: 'elite' },
   { id: 'a3-e-eater', name: 'Prism Eater', enemies: ['prism-eater'], act: 3, tier: 'elite' },
   { id: 'a3-e-wraith', name: 'Wraith & Teeth', enemies: ['archivist-wraith', 'chorus-tooth', 'chorus-tooth'], act: 3, tier: 'elite' },
-  { id: 'a3-boss', name: 'GLYPH ZERO', enemies: ['glyph-zero'], act: 3, tier: 'boss' },
+  { id: 'a3-e-warden', name: 'Warden & Seraph', enemies: ['molten-warden', 'ash-seraph'], act: 3, tier: 'elite' },
+  { id: 'a3-swarm', name: 'The Swarm', enemies: ['chorus-tooth', 'chorus-tooth', 'chorus-tooth'], act: 3, tier: 'normal', minFight: 1 },
+  { id: 'a3-priest-lamprey', name: 'Priest & Lamprey', enemies: ['salt-priest', 'void-lamprey'], act: 3, tier: 'normal', minFight: 2 },
+  { id: 'a3-boss-zero', name: 'GLYPH ZERO', enemies: ['glyph-zero'], act: 3, tier: 'boss' },
+  { id: 'a3-boss-unwritten', name: 'The Unwritten', enemies: ['the-unwritten'], act: 3, tier: 'boss' },
+  { id: 'a3-boss-margin', name: 'The Margin & The Gloss', enemies: ['the-margin', 'the-gloss'], act: 3, tier: 'boss' },
 ];
 
 export function encountersFor(act: number, tier: 'normal' | 'elite' | 'boss'): EncounterDef[] {

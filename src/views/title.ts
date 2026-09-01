@@ -3,6 +3,7 @@ import { loadSave } from '../meta/store.js';
 import type { App, View } from '../ui/app.js';
 import { drawBottomBar } from '../ui/app.js';
 import { box, truncate } from '../ui/draw.js';
+import { statGrid } from '../ui/widgets.js';
 import { BOLD, sgr } from '../ui/theme.js';
 import { banner } from './banner.js';
 import { createMenu } from './common.js';
@@ -203,18 +204,22 @@ function createRecords(): View {
         ['fights won', String(p.totalFightsWon)],
         ['longest chain', String(p.bestChain)],
         ['deepest floor', String(p.bestFloor)],
+        ['best score', String(p.bestScore)],
         ['fastest win', p.fastestWinMs ? `${Math.round(p.fastestWinMs / 60000)} min` : '—'],
       ];
-      stats.forEach(([label, value], i) => {
-        const cy = y + 2 + Math.floor(i / 2);
-        const cx = x + 3 + (i % 2) * Math.floor((w - 6) / 2);
-        s.put(cx, cy, label, t.fg('dim'));
-        s.put(cx + 16, cy, value, sgr(t.fg('title'), BOLD));
-      });
+      statGrid(s, t, { x: x + 3, y: y + 2, width: w - 6, maxRows: 4, rows: stats });
 
       s.put(x + 3, y + 6, 'recent runs', sgr(t.fg('title'), BOLD));
       p.history.slice(0, rows).forEach((run, i) => {
-        const line = `${run.outcome === 'won' ? 'won ' : 'lost'}  act ${run.act}  floor ${String(run.floor).padStart(2)}  chain ${String(run.bestChain).padStart(2)}  ${run.seed}`;
+        const line = [
+          run.outcome === 'won' ? 'won ' : 'lost',
+          (run.character ?? '').padEnd(9).slice(0, 9),
+          `act ${run.act}`,
+          `floor ${String(run.floor).padStart(2)}`,
+          `chain ${String(run.bestChain).padStart(2)}`,
+          `${String(run.score ?? 0).padStart(5)} pts`,
+          run.seed,
+        ].join('  ');
         s.put(x + 3, y + 7 + i, truncate(line, w - 6),
           run.outcome === 'won' ? t.fg('good') : t.fg('dim'));
       });

@@ -11,6 +11,7 @@ import {
   restHealAmount, rollCardChoices, shopDiscount,
 } from '../src/game/run.js';
 import { Rng } from '../src/core/rng.js';
+import { scoreRun, shareLine } from '../src/game/score.js';
 
 /* ------------------------------------------------------------- simulation -- */
 
@@ -27,9 +28,32 @@ test('the same seed replays the same run exactly', () => {
 });
 
 test('different seeds produce different runs', () => {
-  const a = simulateRun('seed-a', 0);
-  const b = simulateRun('seed-b', 0);
-  assert.notDeepEqual([a.floors, a.deckSize, a.bestChain], [b.floors, b.deckSize, b.bestChain]);
+  // Two runs can coincidentally reach the same floor; a spread of ten cannot
+  // all be identical unless the seed is being ignored.
+  const shapes = new Set(
+    Array.from({ length: 10 }, (_, i) => {
+      const r = simulateRun(`spread-${i}`, 0);
+      return `${r.floors}:${r.deckSize}:${r.bestChain}:${r.turns}`;
+    }),
+  );
+  assert.ok(shapes.size >= 7, `only ${shapes.size} distinct runs out of 10 seeds`);
+});
+
+test('every character can be simulated end to end', () => {
+  for (const character of ['archivist', 'kindler', 'warden']) {
+    const result = simulateRun(`char-smoke-${character}`, 0, { character });
+    assert.equal(result.character, character);
+    assert.ok(result.floors > 0);
+  }
+});
+
+test('no character is unplayable, and none is a formality', () => {
+  for (const character of ['archivist', 'kindler', 'warden']) {
+    const batch = simulateBatch(100, 0, 'char-balance', character);
+    assert.ok(batch.winRate > 0.03, `${character} wins ${batch.winRate} — unplayable`);
+    assert.ok(batch.winRate < 0.7, `${character} wins ${batch.winRate} — a formality`);
+    assert.ok(batch.medianFloors >= 9, `${character} median floor ${batch.medianFloors}`);
+  }
 });
 
 test('a batch of runs is winnable but not a formality', () => {
@@ -247,4 +271,54 @@ test('quitting inside a node resumes into that node, not past it', () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+/* ------------------------------------------------------------------ score -- */
+
+test('a better run scores higher', () => {
+  const weak = newRun('score-weak', 0, 'archivist').run;
+  weak.stats.floorsCleared = 4;
+  weak.stats.fightsWon = 2;
+
+  const strong = newRun('score-strong', 0, 'archivist').run;
+  strong.stats.floorsCleared = 27;
+  strong.stats.fightsWon = 19;
+  strong.stats.elitesKilled = 4;
+  strong.stats.bossesKilled = 3;
+  strong.stats.bestChain = 8;
+
+  assert.ok(scoreRun(strong, 'won').total > scoreRun(weak, 'lost').total * 5);
+});
+
+test('depth multiplies the score', () => {
+  const shallow = newRun('mult', 0, 'archivist').run;
+  const deep = newRun('mult', 5, 'archivist').run;
+  for (const run of [shallow, deep]) {
+    run.stats.floorsCleared = 20;
+    run.stats.bestChain = 6;
+  }
+  assert.ok(scoreRun(deep, 'lost').total > scoreRun(shallow, 'lost').total);
+  assert.equal(scoreRun(shallow, 'lost').multiplier, 1);
+});
+
+test('the score never goes negative and always adds up', () => {
+  const run = newRun('score-zero', 0, 'warden').run;
+  const score = scoreRun(run, 'lost');
+  assert.ok(score.total >= 0);
+  assert.equal(score.subtotal, score.lines.reduce((s, l) => s + l.points, 0));
+});
+
+test('the share line is one pasteable line with everything in it', () => {
+  const run = newRun('ember-lantern-412', 2, 'kindler').run;
+  run.stats.floorsCleared = 27;
+  run.stats.bestChain = 8;
+  const line = shareLine(run, 'won');
+  assert.ok(!line.includes('\n'));
+  assert.ok(line.length <= 78, `share line is ${line.length} characters`);
+  assert.match(line, /glyphfall/);
+  assert.match(line, /ember-lantern-412/);
+  assert.match(line, /kindler/);
+  assert.match(line, /d2/);
+  assert.match(line, /chain 8/);
+  assert.match(line, /pts/);
 });

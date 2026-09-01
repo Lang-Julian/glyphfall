@@ -10,6 +10,7 @@ import { Terminal, type Key } from './term.js';
 import { BOLD, makeTheme, sgr, type Appearance, type ColorLevel, type Theme } from './theme.js';
 import { keyHint, setAsciiMode, truncate } from './draw.js';
 import { relicDef } from '../content/relics.js';
+import { characterDef } from '../content/characters.js';
 
 /**
  * The application shell.
@@ -74,6 +75,22 @@ export class App {
   frame = 0;
   dirty = true;
   animating = false;
+  /**
+   * Keys that must never auto-repeat.
+   *
+   * Holding one of these down was ending several turns a second and could end a
+   * run outright. Navigation still repeats — holding an arrow to scan a hand is
+   * exactly what a player expects — but anything that spends a turn or leaves a
+   * screen needs a finger per action.
+   */
+  private static readonly NO_REPEAT = new Set([
+    'e', 'enter', 'space', 'y', 'n', 'r', 't', 'p', 's',
+  ]);
+  /** Below this gap, an identical keypress is the terminal repeating itself. */
+  private static readonly REPEAT_MS = 220;
+  private lastKeyName: string | null = null;
+  private lastKeyAt = 0;
+
   private toastText = '';
   private toastFrames = 0;
   private timer: NodeJS.Timeout | null = null;
@@ -130,7 +147,7 @@ export class App {
         fx.chainPulse = Math.max(0, fx.chainPulse - 1);
         for (const k of Object.keys(fx.hitEnemy)) {
           const v = (fx.hitEnemy[k] ?? 0) - 1;
-          if (v <= 0) delete fx.hitEnemy[k];
+          if (v <= 0) { delete fx.hitEnemy[k]; delete fx.enemyDamage[k]; }
           else fx.hitEnemy[k] = v;
         }
       }
@@ -243,6 +260,13 @@ export class App {
   private handleKey(key: Key): void {
     if (key.name === 'ctrl-c') { this.quit(); return; }
     if (key.name === 'ctrl-l') { this.screen.invalidate(); this.dirty = true; return; }
+
+    const now = Date.now();
+    const repeated = key.name === this.lastKeyName && now - this.lastKeyAt < App.REPEAT_MS;
+    this.lastKeyName = key.name;
+    this.lastKeyAt = now;
+    if (repeated && App.NO_REPEAT.has(key.name)) return;
+    key.repeat = repeated;
     const { width, height } = this.term.size();
     if (width < MIN_WIDTH || height < MIN_HEIGHT) {
       if (key.name === 'q') this.quit();
@@ -276,8 +300,8 @@ export class App {
 
   /* -------------------------------------------------------------- run flow -- */
 
-  beginRun(seed: string, depth: number): void {
-    const { run, rng } = newRun(seed, depth);
+  beginRun(seed: string, depth: number, character?: string): void {
+    const { run, rng } = newRun(seed, depth, character);
     this.run = run;
     this.rng = rng;
     this.combat = null;
@@ -366,7 +390,8 @@ export function drawTopBar(app: App): void {
   let x = s.put(1, 0, 'GLYPHFALL', sgr(t.fg('title'), t.bg('panel'), BOLD));
   if (!run) return;
 
-  x = s.put(x + 2, 0, `${app.actLabel()} ${t.glyph('bullet')} ${app.actName()}`,
+  x = s.put(x + 2, 0,
+    `${characterDef(run.character).name} ${t.glyph('bullet')} ${app.actLabel()} ${t.glyph('bullet')} ${app.actName()}`,
     sgr(t.fg('dim'), t.bg('panel')));
 
   const hpStyle = sgr(t.fg(run.hp / run.maxHp <= 0.3 ? 'hpLow' : 'hp'), t.bg('panel'), BOLD);

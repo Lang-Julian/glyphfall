@@ -17,5 +17,7 @@ export * from './content/statuses.js';
 export * from './game/combat.js';
 export * from './game/map.js';
 export * from './game/run.js';
+export * from './game/score.js';
+export * from './content/characters.js';
 export * from './game/autoplay.js';
 export { version } from './version.js';

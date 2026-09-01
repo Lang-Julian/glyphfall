@@ -15,8 +15,11 @@ export const RELICS: readonly RelicDef[] = [
   /* --------------------------------------------------------------- common -- */
   r({
     id: 'first-link', name: 'First Link', glyph: '∞', rarity: 'common',
-    text: 'Start each turn with 1 chain.',
-    hooks: [{ on: 'stat', startChain: 1 }],
+    text: 'Start each turn with 1 chain. Whenever your chain reaches 4, draw a card.',
+    hooks: [
+      { on: 'stat', startChain: 1 },
+      { on: 'chain-reached', chain: 4, effects: [{ kind: 'draw', amount: 1 }] },
+    ],
   }),
   r({
     id: 'tinder-box', name: 'Tinder Box', glyph: '△', rarity: 'common',
@@ -47,6 +50,24 @@ export const RELICS: readonly RelicDef[] = [
     id: 'whetted-thumb', name: 'Whetted Thumb', glyph: '↑', rarity: 'common',
     text: 'The first Attack you play each turn deals 3 more damage.',
     hooks: [{ on: 'card-played', type: 'attack', nth: 1, effects: [{ kind: 'status', who: 'self', status: 'strength', amount: 0 }] }],
+  }),
+
+  /* ------------------------------------------------- character starters -- */
+  r({
+    id: 'ashheart', name: 'Ashheart', glyph: '◆', rarity: 'common',
+    text: 'Every second Ember card you play in a turn deals 8 damage to ALL enemies and heals you 2.',
+    hooks: [{ on: 'card-played', suit: 'ember', nth: 2, effects: [
+      { kind: 'damage-all', amount: 8 },
+      { kind: 'heal', amount: 2 },
+    ] }],
+  }),
+  r({
+    id: 'ballast', name: 'Ballast', glyph: '■', rarity: 'common',
+    text: 'At the start of combat, gain 4 block. You draw 1 fewer card each turn.',
+    hooks: [
+      { on: 'combat-start', effects: [{ kind: 'block', amount: 4 }] },
+      { on: 'stat', handSize: -1 },
+    ],
   }),
 
   /* ------------------------------------------------------------ uncommon -- */

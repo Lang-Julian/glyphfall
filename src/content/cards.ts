@@ -1,4 +1,4 @@
-import type { Card, CardDef, CardRarity, Suit } from '../core/types.js';
+import type { Card, CardDef } from '../core/types.js';
 
 /**
  * The card pool.
@@ -398,6 +398,64 @@ export const CARDS: readonly CardDef[] = [
     ],
   }),
 
+  /* ========================================================== SIGNATURES == */
+  def({
+    id: 'concordance', name: 'Concordance', suit: 'iron', type: 'power', rarity: 'rare',
+    cost: 1, target: 'none', classes: ['archivist'],
+    text: 'Power. At the start of each turn, gain {c} chain and {blk} block.',
+    vars: { c: 1, blk: 3 }, upgrade: { blk: 5 },
+    effects: [],
+    power: [{ on: 'turn-start', effects: [
+      { kind: 'chain', amount: 1 },
+      { kind: 'block', amount: 3 },
+    ] }],
+    flavour: 'Everything cross-referenced against everything else, forever.',
+  }),
+  def({
+    id: 'cross-reference', name: 'Cross-Reference', suit: 'prism', type: 'skill', rarity: 'rare',
+    cost: 1, target: 'none', classes: ['archivist'],
+    text: 'Gain {c} chain. Draw {n}.',
+    vars: { c: 2, n: 1 }, upgrade: { n: 2 },
+    effects: [{ kind: 'chain', amount: 'c' }, { kind: 'draw', amount: 'n' }],
+  }),
+  def({
+    id: 'bellows', name: 'Bellows', suit: 'ember', type: 'power', rarity: 'rare',
+    cost: 1, target: 'none', classes: ['kindler'],
+    text: 'Power. Whenever you play an Ember card, deal {dmg} damage to a random enemy.',
+    vars: { dmg: 3 }, upgrade: { dmg: 5 },
+    effects: [],
+    power: [{ on: 'card-played', suit: 'ember', effects: [{ kind: 'damage', amount: 3 }] }],
+  }),
+  def({
+    id: 'conflagration', name: 'Conflagration', suit: 'ember', type: 'attack', rarity: 'rare',
+    cost: 2, target: 'all-enemies', classes: ['kindler'],
+    text: 'Deal {dmg} damage to ALL enemies, plus {per} more for each point of chain.',
+    vars: { dmg: 5, per: 4 }, upgrade: { per: 6 },
+    effects: [
+      { kind: 'damage-all', amount: 'dmg' },
+      { kind: 'damage-all-per-chain', amount: 'per' },
+    ],
+    flavour: 'The whole shelf at once.',
+  }),
+  def({
+    id: 'riposte', name: 'Riposte', suit: 'frost', type: 'attack', rarity: 'rare',
+    cost: 1, target: 'enemy', classes: ['warden'],
+    text: 'Gain {blk} block, then deal damage equal to your block.',
+    vars: { blk: 8 }, upgrade: { blk: 12 },
+    effects: [{ kind: 'block', amount: 'blk' }, { kind: 'damage-from-block' }],
+  }),
+  def({
+    id: 'standing-stone', name: 'Standing Stone', suit: 'iron', type: 'power', rarity: 'rare',
+    cost: 2, target: 'none', classes: ['warden'],
+    text: 'Power. At the start of each turn, gain {blk} block and {str} Strength.',
+    vars: { blk: 5, str: 1 }, upgrade: { blk: 8 },
+    effects: [],
+    power: [{ on: 'turn-start', effects: [
+      { kind: 'block', amount: 5 },
+      { kind: 'status', who: 'self', status: 'strength', amount: 1 },
+    ] }],
+  }),
+
   /* ============================================================== CURSES == */
   def({
     id: 'doubt', name: 'Doubt', suit: 'void', type: 'curse', rarity: 'special',
@@ -437,15 +495,10 @@ export const POOL = CARDS.filter(
   (c) => c.rarity === 'common' || c.rarity === 'uncommon' || c.rarity === 'rare',
 );
 
-export function poolBy(rarity: CardRarity, suit?: Suit): CardDef[] {
-  return POOL.filter((c) => c.rarity === rarity && (!suit || c.suit === suit));
+/** The pool a given character actually draws from. */
+export function poolFor(characterId: string): CardDef[] {
+  return POOL.filter((c) => !c.classes || c.classes.includes(characterId));
 }
-
-export const STARTER_DECK: readonly string[] = [
-  'strike', 'strike', 'strike', 'strike',
-  'ward', 'ward', 'ward', 'ward',
-  'sift', 'temper',
-];
 
 /* --------------------------------------------------------- instantiation -- */
 
@@ -453,11 +506,6 @@ let uidCounter = 0;
 export function makeCard(defId: string, upgrades = 0, temporary = false): Card {
   cardDef(defId); // validate early — a typo in content should not survive to combat
   return { uid: `c${(++uidCounter).toString(36)}`, defId, upgrades, temporary };
-}
-
-/** Reset only used by tests, so uids stay comparable across cases. */
-export function _resetUids(): void {
-  uidCounter = 0;
 }
 
 /* ----------------------------------------------------------- description -- */

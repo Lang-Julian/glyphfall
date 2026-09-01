@@ -177,6 +177,77 @@ export const EVENTS: readonly EventDef[] = [
       { label: 'Search anyway', detail: 'Gain 55 gold and a draught.', outcome: { kind: 'combo', of: [{ kind: 'gold', amount: 55 }, { kind: 'draught' }] } },
     ],
   },
+  {
+    id: 'the-understudy', title: 'The Understudy', acts: [1, 2],
+    body: [
+      'Someone has been practising your walk in the dust of the corridor.',
+      'The footprints stop at a mirror that is not there any more.',
+    ],
+    options: [
+      { label: 'Practise back', detail: 'Upgrade 2 random cards.', outcome: { kind: 'upgrade-random', count: 2 } },
+      { label: 'Scuff it out', detail: 'Heal 18% of your max HP.', outcome: { kind: 'heal-percent', percent: 0.18 } },
+      { label: 'Follow the prints', detail: 'Gain an uncommon relic. Lose 14 HP.', outcome: { kind: 'combo', of: [{ kind: 'relic', rarity: 'uncommon' }, { kind: 'hp', amount: -14 }] } },
+    ],
+  },
+  {
+    id: 'the-tally', title: 'The Tally', acts: [1, 2, 3],
+    body: [
+      'Scratches on the wall, five at a time, for longer than the wall is old.',
+      'The last group has four marks in it. There is a loose nail on the floor.',
+    ],
+    options: [
+      { label: 'Add the fifth', detail: 'Gain 130 gold.', outcome: { kind: 'gold', amount: 130 } },
+      { label: 'Start a new group', detail: 'Gain a card of your choice.', outcome: { kind: 'card', rarity: 'uncommon' } },
+      { label: 'Take the nail', detail: 'Gain a common relic.', outcome: { kind: 'relic', rarity: 'common' } },
+    ],
+  },
+  {
+    id: 'the-long-stair', title: 'The Long Stair', acts: [2, 3],
+    body: [
+      'A staircase that descends further than the floor below it is deep.',
+      'There is a shortcut. There is always a shortcut, and it always costs.',
+    ],
+    options: [
+      { label: 'Take the stair', detail: 'Heal 30% of your max HP.', outcome: { kind: 'heal-percent', percent: 0.3 } },
+      { label: 'Take the shortcut', detail: 'Gain a rare relic. Lose 22% of max HP.', outcome: { kind: 'combo', of: [{ kind: 'relic', rarity: 'rare' }, { kind: 'maxHp', amount: -14 }] } },
+    ],
+  },
+  {
+    id: 'the-weighing', title: 'The Weighing', acts: [2, 3],
+    body: [
+      'A pair of scales, one pan holding your deck, the other holding nothing.',
+      'Nothing is winning.',
+    ],
+    options: [
+      { label: 'Lighten the load', detail: 'Remove a card. Heal 15% of max HP.', outcome: { kind: 'combo', of: [{ kind: 'remove-card' }, { kind: 'heal-percent', percent: 0.15 }] } },
+      { label: 'Add to it', detail: 'Gain a rare card. Lose 10 HP.', outcome: { kind: 'combo', of: [{ kind: 'card', rarity: 'rare' }, { kind: 'hp', amount: -10 }] } },
+      { label: 'Tip the scale', detail: 'Gain 100 gold and a draught.', outcome: { kind: 'combo', of: [{ kind: 'gold', amount: 100 }, { kind: 'draught' }] } },
+    ],
+  },
+  {
+    id: 'the-lantern-keeper', title: 'A Debt Called In', acts: [1, 2, 3],
+    body: [
+      'A hand comes out of the dark holding a coin you recognise.',
+      '"You dropped this. Three floors up. I have been carrying it since."',
+    ],
+    options: [
+      { label: 'Take it back', detail: 'Gain 70 gold.', outcome: { kind: 'gold', amount: 70 } },
+      { label: 'Let them keep it', detail: 'Gain an uncommon relic.', outcome: { kind: 'relic', rarity: 'uncommon' } },
+      { label: 'Shake the hand', detail: 'Heal fully. Lose 10 max HP.', outcome: { kind: 'combo', of: [{ kind: 'heal-percent', percent: 1 }, { kind: 'maxHp', amount: -10 }] } },
+    ],
+  },
+  {
+    id: 'the-rehearsal', title: 'The Rehearsal', acts: [1, 2, 3],
+    body: [
+      'Chalk marks on the floor show a fight that has not happened yet.',
+      'One set of marks is yours. It stops rather abruptly.',
+    ],
+    options: [
+      { label: 'Walk it through', detail: 'Upgrade a card of your choice.', outcome: { kind: 'card', rarity: 'uncommon' } },
+      { label: 'Change the ending', detail: 'Remove a card. Gain 50 gold.', outcome: { kind: 'combo', of: [{ kind: 'remove-card' }, { kind: 'gold', amount: 50 }] } },
+      { label: 'Rub out your marks', detail: 'Heal 22% of max HP. Add a Doubt.', outcome: { kind: 'combo', of: [{ kind: 'heal-percent', percent: 0.22 }, { kind: 'curse', defId: 'doubt' }] } },
+    ],
+  },
 ];
 
 export function eventsForAct(act: number): EventDef[] {

@@ -1,8 +1,9 @@
 import { Rng } from '../core/rng.js';
-import { CARDS, POOL, STARTER_DECK, canUpgrade, cardDef, makeCard } from '../content/cards.js';
+import { CARDS, canUpgrade, cardDef, makeCard, poolFor } from '../content/cards.js';
+import { CHARACTERS, DEFAULT_CHARACTER, characterDef } from '../content/characters.js';
 import { DRAUGHTS, MAX_DRAUGHTS, draughtDef } from '../content/draughts.js';
 import { EVENTS, type EventDef, type EventOutcome } from '../content/events.js';
-import { RELICS, STARTER_RELIC, relicDef } from '../content/relics.js';
+import { RELICS, relicDef } from '../content/relics.js';
 import { encountersFor, type EncounterDef } from '../content/enemies.js';
 import { relicMaxHpBonus } from './combat.js';
 import { availableNodes, generateMap, type ActMap, type MapNode } from './map.js';
@@ -16,7 +17,9 @@ import type { Card, CardRarity } from '../core/types.js';
  */
 
 export const ACTS = 3;
-export const SAVE_VERSION = 1;
+/** Bumped whenever RunState changes shape; older saves are discarded rather
+ *  than half-migrated into something that crashes three floors later. */
+export const SAVE_VERSION = 2;
 
 export interface RunStats {
   floorsCleared: number;
@@ -34,6 +37,8 @@ export interface RunStats {
 export interface RunState {
   version: number;
   seed: string;
+  /** Which character is being played; drives the deck, relic, HP and pool. */
+  character: string;
   /** 0 = Descent. Each step up scales enemies and thins your margins. */
   depth: number;
   act: number;
@@ -66,21 +71,25 @@ export const ACT_CLEAR_HEAL = 0.25;
 
 /* ------------------------------------------------------------------- setup -- */
 
-export function newRun(seed: string, depth = 0): { run: RunState; rng: Rng } {
+export function newRun(
+  seed: string, depth = 0, characterId: string = DEFAULT_CHARACTER,
+): { run: RunState; rng: Rng } {
   const rng = new Rng(seed);
-  const relics = [STARTER_RELIC];
-  const maxHp = BASE_MAX_HP + relicMaxHpBonus(relics) - depth * 4;
+  const character = characterDef(characterId);
+  const relics = [character.startingRelic];
+  const maxHp = character.maxHp + relicMaxHpBonus(relics) - depth * 4;
 
   const run: RunState = {
     version: SAVE_VERSION,
     seed,
+    character: character.id,
     depth,
     act: 1,
     map: generateMap(rng.fork('map-1'), 1),
     hp: maxHp,
     maxHp,
     gold: 99,
-    deck: STARTER_DECK.map((id) => makeCard(id)),
+    deck: character.deck.map((id) => makeCard(id)),
     relics,
     draughts: [],
     seenEvents: [],
@@ -202,15 +211,31 @@ const CARD_WEIGHTS: Record<'normal' | 'elite' | 'boss', readonly (readonly [Card
   boss: [['common', 20], ['uncommon', 45], ['rare', 35]],
 };
 
-export function rollCardChoices(rng: Rng, tier: 'normal' | 'elite' | 'boss', n = 3): Card[] {
+/**
+ * Three distinct card offers.
+ *
+ * Weighted toward the character's affinity, because a run that never sees its
+ * own suit cannot build the deck the character exists to build — but only
+ * weighted, never restricted, so an off-suit rare is still a real temptation.
+ */
+export function rollCardChoices(
+  rng: Rng, tier: 'normal' | 'elite' | 'boss', n = 3, characterId = DEFAULT_CHARACTER,
+): Card[] {
+  const character = characterDef(characterId);
+  const pool = poolFor(characterId);
   const chosen: Card[] = [];
   const usedDefs = new Set<string>();
   let guard = 0;
-  while (chosen.length < n && guard++ < 100) {
+  while (chosen.length < n && guard++ < 120) {
     const rarity = rng.weighted(CARD_WEIGHTS[tier]);
-    const candidates = POOL.filter((c) => c.rarity === rarity && !usedDefs.has(c.id));
+    const candidates = pool.filter((c) => c.rarity === rarity && !usedDefs.has(c.id));
     if (candidates.length === 0) continue;
-    const def = rng.pick(candidates);
+    const def = rng.weighted(candidates.map((c) => [
+      c,
+      character.affinity && c.suit === character.affinity ? 2.1
+        : c.suit === 'prism' ? 1.2
+        : 1,
+    ] as const));
     usedDefs.add(def.id);
     chosen.push(makeCard(def.id, rng.chance(0.18) ? 1 : 0));
   }
@@ -238,7 +263,7 @@ export function combatRewards(
     : tier === 'elite' ? rng.int(48, 68) + actBonus
     : rng.int(22, 36) + actBonus;
 
-  const reward: CombatReward = { gold, cards: rollCardChoices(rng, tier) };
+  const reward: CombatReward = { gold, cards: rollCardChoices(rng, tier, 3, run.character) };
   if (tier === 'elite') reward.relic = rollRelic(run, rng, rng.weighted([['uncommon', 60], ['rare', 40]] as const));
   if (tier === 'normal' && rng.chance(0.28)) reward.draught = rng.pick(DRAUGHTS).id;
   if (tier === 'elite' && rng.chance(0.5)) reward.draught = rng.pick(DRAUGHTS).id;
@@ -291,7 +316,7 @@ export function buildShop(run: RunState, rng: Rng): ShopItem[] {
   const price = (base: number) => Math.max(1, Math.round(base * (1 - discount) * rng.int(92, 110) / 100));
   const items: ShopItem[] = [];
 
-  const cardDefs = rng.sample(POOL.filter((c) => c.rarity !== 'starter'), 5);
+  const cardDefs = rng.sample(poolFor(run.character).filter((c) => c.rarity !== 'starter'), 5);
   for (const d of cardDefs) {
     const card = makeCard(d.id);
     items.push({
@@ -394,7 +419,7 @@ function applyOne(run: RunState, rng: Rng, o: EventOutcome, report: OutcomeRepor
       break;
     }
     case 'card': {
-      report.cardChoices = rollCardChoices(rng, o.rarity === 'rare' ? 'boss' : 'elite', 3);
+      report.cardChoices = rollCardChoices(rng, o.rarity === 'rare' ? 'boss' : 'elite', 3, run.character);
       report.pending.push('card-choice');
       break;
     }
@@ -469,6 +494,21 @@ export function heal(run: RunState, n: number): number {
 export function validateContent(): string[] {
   const problems: string[] = [];
   const cardIds = new Set(CARDS.map((c) => c.id));
+  const characterIds = new Set(CHARACTERS.map((c) => c.id));
+  for (const character of CHARACTERS) {
+    if (character.deck.length !== 10) problems.push(`${character.id} deck is ${character.deck.length} cards`);
+    for (const id of character.deck) {
+      if (!cardIds.has(id)) problems.push(`${character.id} starts with unknown card ${id}`);
+    }
+    if (!RELICS.some((r) => r.id === character.startingRelic)) {
+      problems.push(`${character.id} starts with unknown relic ${character.startingRelic}`);
+    }
+  }
+  for (const card of CARDS) {
+    for (const id of card.classes ?? []) {
+      if (!characterIds.has(id)) problems.push(`${card.id} is restricted to unknown character ${id}`);
+    }
+  }
   for (const c of CARDS) {
     for (const fx of c.effects) {
       if (fx.kind === 'add-card' && !cardIds.has(fx.defId)) problems.push(`${c.id} adds unknown card ${fx.defId}`);
