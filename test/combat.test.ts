@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { makeCard } from '../src/content/cards.js';
 import {
-  BASE_HAND_SIZE, HAND_LIMIT, canPlay, cloneCombat, drawCards, endTurn,
-  incomingDamage, playCard, startCombat, statusOf, type CombatState,
+  BASE_HAND_SIZE, HAND_LIMIT, beginEnemyPhase, canPlay, cloneCombat, drawCards,
+  endTurn, incomingDamage, playCard, startCombat, statusOf, stepEnemyPhase,
+  type CombatState,
 } from '../src/game/combat.js';
 
 function combat(deck: readonly string[], o: Partial<{
@@ -256,4 +257,85 @@ test('Echo with nothing before it is a no-op, not a crash', () => {
   const before = s.enemies[0]!.hp;
   assert.doesNotThrow(() => playCard(s, idx(s, 'echo'), 0));
   assert.equal(s.enemies[0]!.hp, before);
+});
+
+/* ------------------------------------------------------- turns and block -- */
+
+test('block soaks the enemy turn, then clears at the start of yours', () => {
+  const s = combat(['ward', 'ward', 'ward', 'ward', 'ward'], { enemies: ['cinder-hound'] });
+  pull(s);
+  playCard(s, idx(s, 'ward'), 0);
+  const block = s.player.block;
+  assert.ok(block > 0, 'Ward gave block');
+
+  const hp = s.player.hp;
+  endTurn(s);
+  assert.ok(s.player.hp >= hp - 8, 'the block absorbed part of the hit');
+  assert.equal(s.player.block, 0, 'and is gone by the time you act again');
+  assert.equal(s.phase, 'player');
+  assert.equal(s.turn, 2);
+});
+
+test('Anchor is the exception that keeps block across turns', () => {
+  const s = combat(['winters-hold', 'bulwark', 'ward', 'ward', 'ward'], { enemies: ['cinder-hound'] });
+  pull(s);
+  playCard(s, idx(s, 'winters-hold'), 0);
+  playCard(s, idx(s, 'bulwark'), 0);
+  const block = s.player.block;
+  endTurn(s);
+  assert.ok(s.player.block > 0, `block survived (${block} before)`);
+});
+
+test('the enemy phase resolves one enemy per step', () => {
+  const s = combat(Array.from({ length: 10 }, () => 'ward'),
+    { enemies: ['cinder-hound', 'cinder-hound', 'cinder-hound'] });
+  beginEnemyPhase(s);
+  assert.equal(s.phase, 'enemy');
+  assert.equal(s.pendingEnemies.length, 3);
+
+  const acted: string[] = [];
+  let steps = 0;
+  while (stepEnemyPhase(s)) {
+    steps++;
+    if (s.fx.actor) acted.push(s.fx.actor);
+    assert.ok(steps < 10, 'the phase must terminate');
+  }
+  assert.equal(new Set(acted).size, 3, 'each enemy acted exactly once');
+  assert.equal(s.phase, 'player', 'and the turn came back');
+});
+
+test('the stepped phase and the all-at-once phase agree exactly', () => {
+  const stepped = combat(Array.from({ length: 10 }, () => 'ward'),
+    { enemies: ['ledger-moth', 'cinder-hound'] });
+  const atOnce = cloneCombat(stepped);
+
+  beginEnemyPhase(stepped);
+  while (stepEnemyPhase(stepped)) { /* one enemy at a time */ }
+  endTurn(atOnce);
+
+  assert.equal(stepped.player.hp, atOnce.player.hp);
+  assert.equal(stepped.turn, atOnce.turn);
+  assert.deepEqual(
+    stepped.enemies.map((e) => [e.hp, e.block]),
+    atOnce.enemies.map((e) => [e.hp, e.block]),
+  );
+});
+
+test('the enemy phase always terminates, even when everything dies mid-way', () => {
+  const s = combat(Array.from({ length: 10 }, () => 'ward'), { enemies: ['glass-wisp'] });
+  s.enemies[0]!.hp = 1;
+  beginEnemyPhase(s);
+  let guard = 0;
+  while (stepEnemyPhase(s)) assert.ok(guard++ < 20, 'runaway phase');
+  assert.ok(s.phase === 'player' || s.over !== null);
+});
+
+test('a hit records what it was, so the interface can show it', () => {
+  const s = combat(Array.from({ length: 10 }, () => 'gleam'), { enemies: ['ash-seraph'] });
+  const hp = s.player.hp;
+  endTurn(s);
+  if (s.player.hp < hp) {
+    assert.equal(s.fx.lastHit, hp - s.player.hp);
+    assert.ok(s.fx.hitPlayer > 0, 'and flags the flash');
+  }
 });

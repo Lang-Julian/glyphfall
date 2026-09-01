@@ -57,6 +57,12 @@ and enemy in the game is designed to pull on that one thread.
 `◉ PRISM` cards match everything and never break a chain. `Resolve` and a few relics let
 you start a turn with the chain already running.
 
+**Block** works the way it does in every deckbuilder and trips up everyone the first
+time: it soaks damage during the enemy's turn and then **clears at the start of your
+next one**. It is meant to be spent. Gain exactly as much as the telegraphed attack
+needs and put the rest of your energy into killing things — the screen shows the
+incoming total and how much of it gets through, so you never have to guess.
+
 ---
 
 ## What it looks like
@@ -94,6 +100,11 @@ Everything you need to plan a turn is on one screen: incoming damage, the chain 
 which cards continue the chain (`»`), and one dedicated row spelling out exactly what the
 highlighted card will do **after** strength, weakness, vulnerability and the chain bonus.
 Nothing is hidden except the enemy's move *after* the one it has already told you about.
+
+When you end your turn, the enemies act **one at a time, with a beat between them** —
+the acting enemy is highlighted, the damage you take is spelled out next to your health,
+and the log says what happened. A whole round resolving in a single frame is how a
+turn-based game ends up feeling like it is cheating.
 
 ---
 

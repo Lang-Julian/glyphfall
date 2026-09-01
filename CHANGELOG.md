@@ -24,6 +24,10 @@ First release.
 - A headless autoplayer used to measure balance, and `scripts/balance.mjs`,
   which fails CI if the game becomes unwinnable or trivial.
 - `scripts/preview.mjs`, which renders any screen as plain text at any size.
+- The enemy phase resolves one enemy at a time with a beat between actions, the
+  acting enemy highlighted and the damage taken shown next to your health.
+  Resolving a whole round in one frame meant players could not see what hit
+  them.
 - Light and dark palettes (`--light` / `--dark`, or a toggle on the title screen
   that is remembered). The game paints its own background rather than
   inheriting the terminal's, so text can never end up white-on-white; contrast

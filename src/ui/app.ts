@@ -28,6 +28,11 @@ export interface View {
   overlay?: boolean;
   /** Called when this view becomes the top of the stack again. */
   onFocus?(app: App): void;
+  /**
+   * Called on every frame while this view is on top. Used by combat to play
+   * the enemy phase out one action at a time instead of in a single frame.
+   */
+  tick?(app: App): void;
 }
 
 export interface AppOptions {
@@ -119,7 +124,7 @@ export class App {
     if (this.combat) {
       const fx = this.combat.fx;
       if (fx.shake > 0 || fx.hitPlayer > 0 || fx.chainPulse > 0 || Object.keys(fx.hitEnemy).length > 0) {
-        if (this.opts.animations) this.dirty = true;
+        this.dirty = true;
         fx.shake = Math.max(0, fx.shake - 1);
         fx.hitPlayer = Math.max(0, fx.hitPlayer - 1);
         fx.chainPulse = Math.max(0, fx.chainPulse - 1);
@@ -130,6 +135,7 @@ export class App {
         }
       }
     }
+    this.top()?.tick?.(this);
     if (this.animating && this.opts.animations) this.dirty = true;
     if (this.dirty) this.render();
   }

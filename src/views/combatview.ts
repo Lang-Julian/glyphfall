@@ -4,8 +4,8 @@ import { enemyDef } from '../content/enemies.js';
 import { relicDef } from '../content/relics.js';
 import { STATUSES } from '../content/statuses.js';
 import {
-  MAX_CHAIN, canPlay, displayIntent, endTurn, incomingDamage, livingEnemies,
-  playCard, previewCard, useDraughtEffects, wouldChain,
+  MAX_CHAIN, beginEnemyPhase, canPlay, displayIntent, incomingDamage, livingEnemies,
+  playCard, previewCard, stepEnemyPhase, useDraughtEffects, wouldChain,
   type CombatState, type EnemyState,
 } from '../game/combat.js';
 import type { App, View } from '../ui/app.js';
@@ -52,13 +52,13 @@ interface Layout {
  */
 function layout(width: number, height: number): Layout {
   const handRows = height >= 31 ? CARD_H_FULL : height >= 27 ? CARD_H_MID : CARD_H_SMALL;
-  // One line of log by default. A scrolling wall of text is the loudest thing
-  // on a combat screen and the least useful.
-  const logRows = height >= 34 ? 3 : height >= 29 ? 2 : 1;
+  // Enough log to see a whole enemy turn. One line hid it completely, which is
+  // exactly the failure this height is chosen to prevent.
+  const logRows = height >= 30 ? 4 : height >= 26 ? 3 : 2;
   const fixed = 2 /* top bar + encounter line */ + 1 /* rule */ + 2 /* player */ +
                 1 /* card detail */ + handRows + 1 /* key bar */;
   const enemyTop = 2;
-  const enemyRows = Math.max(6, height - fixed - logRows);
+  const enemyRows = Math.max(9, height - fixed - logRows);
   const ruleY = enemyTop + enemyRows;
   const playerY = ruleY + 1;
   const detailY = playerY + 2;
@@ -72,10 +72,15 @@ export interface CombatViewOptions {
   onLose(app: App): void;
 }
 
+/** Frames between enemy actions — long enough to read, short enough to keep
+ *  a turn moving. About a third of a second at the 60ms frame timer. */
+const ENEMY_BEAT = 6;
+
 export function createCombatView(o: CombatViewOptions): View {
   let cardIndex = 0;
   let target = 0;
   let resolved = false;
+  let beat = 0;
 
   const clampSelection = (c: CombatState) => {
     cardIndex = c.hand.length === 0 ? 0 : Math.max(0, Math.min(c.hand.length - 1, cardIndex));
@@ -108,6 +113,26 @@ export function createCombatView(o: CombatViewOptions): View {
   return {
     id: 'combat',
 
+    /**
+     * Plays the enemy phase out one action at a time. Resolving a whole round
+     * in a single frame is why players could not tell what had hit them.
+     */
+    tick(app) {
+      const c = app.combat;
+      if (!c || c.over || c.phase !== 'enemy') return;
+      if (!app.opts.animations) {
+        while (stepEnemyPhase(c)) { /* no pauses when animation is off */ }
+        app.requestRender();
+        settle(app, c);
+        return;
+      }
+      if (++beat < ENEMY_BEAT) return;
+      beat = 0;
+      stepEnemyPhase(c);
+      app.requestRender();
+      settle(app, c);
+    },
+
     render(app) {
       const c = app.combat;
       if (!c) return;
@@ -124,6 +149,10 @@ export function createCombatView(o: CombatViewOptions): View {
       drawHand(app, c, L.handY, L.handRows, cardIndex);
       drawLog(app, c, L.logY, L.logRows);
 
+      if (c.phase === 'enemy') {
+        drawBottomBar(app, [['', 'their turn — watch what they do']]);
+        return;
+      }
       // Drop the least important hints rather than letting the bar clip.
       const hints: (readonly [string, string])[] = [
         ['←→', 'card'], ['↑↓', 'target'], ['↵', 'play'], ['e', 'end turn'],
@@ -139,6 +168,12 @@ export function createCombatView(o: CombatViewOptions): View {
       clampSelection(c);
       const n = Number(key.name);
 
+      // The enemy phase plays itself out; only pausing is allowed during it.
+      if (c.phase === 'enemy') {
+        if (key.name === 'q' || key.name === 'escape') openPause(app);
+        return;
+      }
+
       switch (key.name) {
         case 'left': case 'h':
           if (c.hand.length > 0) cardIndex = (cardIndex - 1 + c.hand.length) % c.hand.length;
@@ -150,7 +185,8 @@ export function createCombatView(o: CombatViewOptions): View {
         case 'down': case 'j': case 'tab': target = cycleTarget(c, target, 1); break;
         case 'enter': case 'space': play(app, c, cardIndex, target); break;
         case 'e':
-          endTurn(c);
+          beginEnemyPhase(c);
+          beat = 0;
           cardIndex = 0;
           settle(app, c);
           break;
@@ -203,11 +239,16 @@ function drawEnemies(
     const flash = (c.fx.hitEnemy[en.id] ?? 0) > 0;
 
     const name = truncate(dead ? `${en.name} — down` : en.name, slotW - 4);
+    const acting = c.fx.actor === en.id;
     const nameStyle = dead ? t.fg('faint')
       : flash ? sgr(t.fg('invert'), t.bg('bad'), BOLD)
+      : acting ? sgr(t.fg('invert'), t.bg('warn'), BOLD)
       : isTarget ? sgr(t.fg('title'), REVERSE, BOLD)
       : t.fg('text');
-    s.putCenter(x, slotW, row(0), isTarget && !dead ? ` ${name} ` : name, nameStyle);
+    const decorated = acting ? `${t.glyph('arrow')} ${name} ${t.glyph('arrow')}`
+      : isTarget && !dead ? ` ${name} `
+      : name;
+    s.putCenter(x, slotW, row(0), decorated, nameStyle);
 
     if (dead) return;
 
@@ -215,11 +256,14 @@ function drawEnemies(
       s.putCenter(x, slotW, row(1 + j), line, flash ? t.fg('bad') : t.fg(tierColor(d.tier)));
     });
 
-    const label = `${en.hp}/${en.maxHp}`;
-    const barW = Math.max(6, Math.min(slotW - 10 - label.length, 16));
-    const bx = x + Math.floor((slotW - (barW + 1 + label.length)) / 2);
+    // Block rides the far side of the bar; drawing it to the left of a centred
+    // bar pushed it off the edge of the leftmost enemy's slot.
+    const label = en.block > 0
+      ? `${en.hp}/${en.maxHp} ${t.glyph('shield')}${en.block}`
+      : `${en.hp}/${en.maxHp}`;
+    const barW = Math.max(6, Math.min(slotW - 6 - label.length, 16));
+    const bx = x + Math.max(1, Math.floor((slotW - (barW + 1 + label.length)) / 2));
     gauge(s, t, bx, row(5), barW, en.hp, en.maxHp, 'hp', label);
-    if (en.block > 0) s.put(bx - 4, row(5), `${t.glyph('shield')}${en.block}`, sgr(t.fg('block'), BOLD));
 
     const intent = displayIntent(c, en);
     s.putCenter(x, slotW, row(6), truncate(intentText(intent), slotW - 2), intentStyle(app, intent));
@@ -286,7 +330,17 @@ function drawPlayerBar(app: App, c: CombatState, y: number): void {
   let x = s.put(1, y, 'hp ', t.fg(low ? 'hpLow' : 'hp'));
   x = gauge(s, t, x, y, 14, p.hp, p.maxHp, low ? 'hpLow' : 'hp', `${p.hp}/${p.maxHp}`) + 2;
 
-  if (p.block > 0) x = s.put(x, y, `${t.glyph('shield')} ${p.block}  `, sgr(t.fg('block'), BOLD));
+  // The damage you just took, spelled out for a moment.
+  if (c.fx.hitPlayer > 0 && c.fx.lastHit > 0) {
+    x = s.put(x, y, `-${c.fx.lastHit}  `, sgr(t.fg('invert'), t.bg('hpLow'), BOLD));
+  }
+
+  // Always shown, even at zero: a stat that vanishes when it empties reads as
+  // a bug rather than as a resource that is spent.
+  const anchored = (p.statuses['anchor'] ?? 0) > 0;
+  x = s.put(x, y, `${t.glyph('shield')} ${p.block}`,
+    p.block > 0 ? sgr(t.fg('block'), BOLD) : t.fg('faint'));
+  x = s.put(x, y, anchored ? ' kept  ' : '  ', t.fg('faint'));
 
   x = s.put(x, y, `${t.glyph('bolt')} `, t.fg('energy'));
   for (let i = 0; i < Math.max(c.energyPerTurn, c.energy); i++) {
@@ -330,6 +384,13 @@ function drawSelectedCard(
   app: App, c: CombatState, y: number, cardIndex: number, target: number,
 ): void {
   const { screen: s, theme: t } = app;
+  if (c.phase === 'enemy') {
+    const actor = c.enemies.find((e) => e.id === c.fx.actor);
+    s.putCenter(0, s.width, y,
+      actor ? `${actor.name} is acting…` : 'their turn…',
+      sgr(t.fg('warn'), BOLD));
+    return;
+  }
   const card = c.hand[cardIndex];
   if (!card) {
     s.putCenter(0, s.width, y, 'no cards in hand', t.fg('faint'));
@@ -362,7 +423,11 @@ function suitColorOf(suit: keyof typeof SUIT_GLYPH): ColorName {
 function drawHand(app: App, c: CombatState, y: number, h: number, cardIndex: number): void {
   const { screen: s, theme: t } = app;
   if (c.hand.length === 0) {
-    s.putCenter(0, s.width, y + Math.floor(h / 2), 'press  e  to end your turn', t.fg('faint'));
+    // During the enemy phase the hand is legitimately empty; telling the player
+    // to end a turn they are not in would be nonsense.
+    if (c.phase !== 'enemy') {
+      s.putCenter(0, s.width, y + Math.floor(h / 2), 'press  e  to end your turn', t.fg('faint'));
+    }
     return;
   }
 
@@ -511,6 +576,10 @@ export function createCombatHelp(): View {
       'A » in a card corner means playing it keeps the chain alive.',
       'PRISM cards match everything and never break a chain.',
       'The chain resets each turn unless Resolve or a relic seeds it.',
+      '',
+      'BLOCK soaks damage and then clears at the start of your next turn.',
+      'It is meant to be spent — gain exactly as much as you need, and put',
+      'the rest of your energy into attacking. (The Anchor effect keeps it.)',
       '',
       '←→ pick card    ↑↓ pick target    ↵ play    e end turn',
       '1-9 play directly    d inspect    p draught    v piles',

@@ -1,6 +1,8 @@
 import { EVENTS } from '../content/events.js';
 import { makeCard } from '../content/cards.js';
-import { playCard, startCombat, type CombatState } from '../game/combat.js';
+import {
+  beginEnemyPhase, playCard, startCombat, stepEnemyPhase, type CombatState,
+} from '../game/combat.js';
 import { addCard, addRelic, combatRewards, newRun, options, type RunState } from '../game/run.js';
 import type { Rng } from '../core/rng.js';
 import { createCardPicker } from '../views/common.js';
@@ -26,8 +28,9 @@ import { makeTheme, type Appearance, type ColorLevel, type Theme } from './theme
  * game's own background — at every window size worth caring about.
  */
 
-export const PREVIEW_SCREENS =
-  ['title', 'map', 'combat', 'reward', 'shop', 'rest', 'event', 'gameover'] as const;
+export const PREVIEW_SCREENS = [
+  'title', 'map', 'combat', 'enemy-turn', 'reward', 'shop', 'rest', 'event', 'gameover',
+] as const;
 export type PreviewScreen = (typeof PREVIEW_SCREENS)[number];
 
 export interface PreviewOptions {
@@ -100,6 +103,7 @@ function viewsFor(run: RunState, rng: Rng): Record<PreviewScreen, () => View> {
     title: () => createTitleView({ onNewRun: noop, onContinue: noop }),
     map: () => createMapView({ onEnter: noop }),
     combat: () => createCombatView({ onWin: noop, onLose: noop }),
+    'enemy-turn': () => createCombatView({ onWin: noop, onLose: noop }),
     reward: () => createCardPicker({
       id: 'preview-reward',
       title: 'A card for the road',
@@ -129,6 +133,12 @@ export function renderPreviewScreen(name: PreviewScreen, o: PreviewOptions = {})
   screen.setBaseStyle(theme.bg('base'));
 
   const { run, rng, combat } = scenario();
+  // The enemy-turn frame is a real mid-phase state, so the tests cover the
+  // layout the player actually sees while being hit.
+  if (name === 'enemy-turn') {
+    beginEnemyPhase(combat);
+    stepEnemyPhase(combat);
+  }
   const app = buildApp(screen, theme, run, rng, combat, appearance, ascii);
   screen.clear();
   viewsFor(run, rng)[name]().render(app);

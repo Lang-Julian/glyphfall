@@ -72,6 +72,15 @@ export interface CombatState {
   /** Chain-threshold hooks already fired this turn, keyed `hookIndex@chain`. */
   firedChainHooks: Set<string>;
 
+  /**
+   * Whose turn it is. The enemy phase is resolved one enemy at a time so the
+   * interface can put a beat between each action — resolving a whole round in
+   * a single frame means the player never sees what hit them.
+   */
+  phase: 'player' | 'enemy';
+  /** Enemy ids still to act this round. */
+  pendingEnemies: string[];
+
   log: LogEntry[];
   over: 'win' | 'lose' | null;
   /** Rewards context. */
@@ -80,7 +89,16 @@ export interface CombatState {
 
   rng: Rng;
   /** Purely cosmetic: what the renderer should flash this frame. */
-  fx: { shake: number; hitEnemy: Record<string, number>; hitPlayer: number; chainPulse: number };
+  fx: {
+    shake: number;
+    hitEnemy: Record<string, number>;
+    hitPlayer: number;
+    chainPulse: number;
+    /** Damage from the most recent hit on the player, for the floating number. */
+    lastHit: number;
+    /** Enemy currently acting, highlighted during the enemy phase. */
+    actor: string | null;
+  };
 }
 
 /* -------------------------------------------------------------- utilities -- */
@@ -211,10 +229,11 @@ export function startCombat(o: StartCombatOptions): CombatState {
     turn: 0, cardsPlayedThisTurn: 0,
     suitPlays: {}, typePlays: {}, playedThisTurn: [],
     powers: [], relics: [...o.relics], firedChainHooks: new Set(),
+    phase: 'player', pendingEnemies: [],
     log: [], over: null,
     tier: o.tier, encounterName: o.encounterName,
     rng,
-    fx: { shake: 0, hitEnemy: {}, hitPlayer: 0, chainPulse: 0 },
+    fx: { shake: 0, hitEnemy: {}, hitPlayer: 0, chainPulse: 0, lastHit: 0, actor: null },
   };
 
   if (has(s, RULE_RELICS.thornyFoes)) {
@@ -269,8 +288,15 @@ export function beginTurn(s: CombatState): void {
   }
 }
 
-export function endTurn(s: CombatState): void {
-  if (s.over) return;
+/**
+ * Ends the player's turn and hands over to the enemies.
+ *
+ * Resolves everything that belongs to the player's own end of turn, then queues
+ * the enemies rather than running them. Call `stepEnemyPhase` until it returns
+ * false to finish the round — or `endTurn`, which does exactly that in one go.
+ */
+export function beginEnemyPhase(s: CombatState): void {
+  if (s.over || s.phase === 'enemy') return;
 
   // Ethereal cards resolve from hand; curses bite.
   for (const card of [...s.hand]) {
@@ -294,19 +320,49 @@ export function endTurn(s: CombatState): void {
   tickStatuses(s, s.player, 'player');
   if (checkOver(s)) return;
 
-  for (const en of livingEnemies(s)) {
-    takeEnemyTurn(s, en);
-    if (checkOver(s)) return;
+  s.phase = 'enemy';
+  s.pendingEnemies = livingEnemies(s).map((e) => e.id);
+  say(s, '— their turn —', 'system');
+}
+
+/**
+ * Resolves one enemy's action, or finishes the round when none are left.
+ * Returns true while the enemy phase is still running.
+ */
+export function stepEnemyPhase(s: CombatState): boolean {
+  if (s.over) { s.phase = 'player'; s.pendingEnemies = []; s.fx.actor = null; return false; }
+  if (s.phase !== 'enemy') return false;
+
+  const id = s.pendingEnemies.shift();
+  if (id !== undefined) {
+    const enemy = s.enemies.find((e) => e.id === id);
+    if (enemy && isAlive(enemy)) {
+      s.fx.actor = enemy.id;
+      takeEnemyTurn(s, enemy);
+    }
+    if (checkOver(s)) { s.phase = 'player'; s.pendingEnemies = []; s.fx.actor = null; return false; }
+    return true;
   }
 
+  // End of the round: statuses tick, block resets, next intents are telegraphed.
+  s.fx.actor = null;
   for (const en of livingEnemies(s)) {
     tickStatuses(s, en, 'enemy');
     en.block = 0;
     telegraph(s, en);
   }
-  if (checkOver(s)) return;
-
+  if (checkOver(s)) { s.phase = 'player'; return false; }
+  s.phase = 'player';
   beginTurn(s);
+  return false;
+}
+
+/** The whole round at once. Used by tests and the autoplayer. */
+export function endTurn(s: CombatState): void {
+  if (s.over) return;
+  beginEnemyPhase(s);
+  let guard = 0;
+  while (stepEnemyPhase(s) && guard++ < 64) { /* resolve every enemy */ }
 }
 
 function tickStatuses(s: CombatState, c: Combatant, side: 'player' | 'enemy'): void {
@@ -768,11 +824,12 @@ export function damagePlayer(
   }
   if (remaining > 0) {
     s.player.hp = Math.max(0, s.player.hp - remaining);
-    s.fx.hitPlayer = 1;
+    s.fx.hitPlayer = 8;
+    s.fx.lastHit = remaining;
     s.fx.shake = Math.min(3, 1 + Math.floor(remaining / 12));
     say(s, `You take ${remaining}${o.source ? ` from ${o.source}` : ''}.`, 'bad');
   } else if (n > 0) {
-    say(s, `Blocked ${n}.`, 'good');
+    say(s, `Blocked ${n}${o.source ? ` from ${o.source}` : ''}.`, 'good');
   }
 }
 
@@ -1075,6 +1132,7 @@ export function cloneCombat(s: CombatState): CombatState {
     hand: s.hand.map((c) => ({ ...c })),
     discard: s.discard.map((c) => ({ ...c })),
     exhaust: s.exhaust.map((c) => ({ ...c })),
+    pendingEnemies: [...s.pendingEnemies],
     suitPlays: { ...s.suitPlays },
     typePlays: { ...s.typePlays },
     playedThisTurn: s.playedThisTurn.map((c) => ({ ...c })),
@@ -1083,6 +1141,6 @@ export function cloneCombat(s: CombatState): CombatState {
     firedChainHooks: new Set(s.firedChainHooks),
     log: [],
     rng: s.rng.clone(),
-    fx: { shake: 0, hitEnemy: {}, hitPlayer: 0, chainPulse: 0 },
+    fx: { shake: 0, hitEnemy: {}, hitPlayer: 0, chainPulse: 0, lastHit: 0, actor: null },
   };
 }
