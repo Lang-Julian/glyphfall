@@ -1,0 +1,57 @@
+{
+  "name": "glyphfall",
+  "version": "0.1.0",
+  "description": "A roguelike deckbuilder that lives in your terminal. Chain your glyphs, break the Fall.",
+  "keywords": [
+    "game",
+    "terminal",
+    "tui",
+    "roguelike",
+    "deckbuilder",
+    "cli",
+    "ascii",
+    "cards"
+  ],
+  "license": "MIT",
+  "author": "Julian Lang",
+  "type": "module",
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "bin": {
+    "glyphfall": "dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lang-Julian/glyphfall.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Lang-Julian/glyphfall/issues"
+  },
+  "homepage": "https://github.com/Lang-Julian/glyphfall#readme",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/shebang.mjs",
+    "dev": "npm run build --silent && node dist/cli.js",
+    "start": "npm run build --silent && node dist/cli.js",
+    "play": "npm run build --silent && node dist/cli.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsc -p tsconfig.test.json && node --test dist-test/test/",
+    "test:fast": "tsc -p tsconfig.test.json && node --test dist-test/test/",
+    "lint": "npm run typecheck",
+    "clean": "rm -rf dist dist-test",
+    "prepublishOnly": "npm run clean && npm run build && npm run test:fast"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.4"
+  }
+}

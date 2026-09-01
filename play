@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+# One command to play from a clone: installs what is missing, builds what is
+# stale, then starts the game. Safe to run repeatedly.
+set -eu
+cd "$(dirname "$0")"
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "glyphfall needs Node 20 or newer: https://nodejs.org" >&2
+  exit 1
+fi
+
+major=$(node -p 'process.versions.node.split(".")[0]')
+if [ "$major" -lt 20 ]; then
+  echo "glyphfall needs Node 20 or newer (found $(node -v))." >&2
+  exit 1
+fi
+
+[ -d node_modules ] || npm install --silent --no-audit --no-fund
+
+# Rebuild when any source file is newer than the built entry point.
+if [ ! -f dist/cli.js ] || [ -n "$(find src -newer dist/cli.js -name '*.ts' -print -quit 2>/dev/null)" ]; then
+  npm run build --silent
+fi
+
+exec node dist/cli.js "$@"
