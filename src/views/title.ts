@@ -62,6 +62,13 @@ export function createTitleView(o: {
       act: (app) => app.push(createRecords()),
     },
     {
+      // Terminal backgrounds are not reliably detectable, so this is one
+      // keystroke away rather than buried in a config file.
+      label: 'Appearance',
+      detail: 'switch between light and dark — press enter to toggle',
+      act: (app) => app.setAppearance(app.opts.appearance === 'light' ? 'dark' : 'light'),
+    },
+    {
       label: 'Quit',
       detail: '',
       act: (app) => app.exit(),
@@ -100,7 +107,10 @@ export function createTitleView(o: {
         const active = i === cursor;
         s.put(x + 2, iy, active ? `${t.glyph('arrow')} ` : '  ', sgr(t.fg('accent'), BOLD));
         s.put(x + 4, iy, truncate(item.label, 18), active ? sgr(t.fg('title'), BOLD) : t.fg('text'));
-        s.put(x + 23, iy, truncate(item.detail, w - 25), active ? t.fg('dim') : t.fg('faint'));
+        const detail = item.label === 'Appearance'
+          ? `currently ${app.opts.appearance} — press enter to switch`
+          : item.detail;
+        s.put(x + 23, iy, truncate(detail, w - 25), active ? t.fg('dim') : t.fg('faint'));
       });
 
       const p = app.profile;

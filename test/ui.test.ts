@@ -142,9 +142,21 @@ test('no-colour themes emit no escape parameters at all', () => {
 });
 
 test('each colour level produces the right escape shape', () => {
-  assert.match(makeTheme('truecolor', true).fg('ember'), /^38;2;\d+;\d+;\d+$/);
-  assert.match(makeTheme('ansi256', true).fg('ember'), /^38;5;\d+$/);
-  assert.match(makeTheme('ansi16', true).fg('ember'), /^\d+$/);
+  // Every foreground carries the base background with it, so the game paints
+  // its own surface instead of inheriting the terminal's.
+  assert.match(makeTheme('truecolor', true).fg('ember'), /^38;2;\d+;\d+;\d+;48;2;\d+;\d+;\d+$/);
+  assert.match(makeTheme('ansi256', true).fg('ember'), /^38;5;\d+;48;5;\d+$/);
+  assert.match(makeTheme('ansi16', true).fg('ember'), /^\d+;\d+$/);
+  assert.match(makeTheme('truecolor', true).bg('panel'), /^48;2;\d+;\d+;\d+$/);
+});
+
+test('the light and dark palettes differ where it matters', () => {
+  const dark = makeTheme('truecolor', true, 'dark');
+  const light = makeTheme('truecolor', true, 'light');
+  assert.notEqual(dark.fg('text'), light.fg('text'));
+  assert.notEqual(dark.bg('base'), light.bg('base'));
+  assert.equal(dark.appearance, 'dark');
+  assert.equal(light.appearance, 'light');
 });
 
 test('ascii mode never emits a non-ascii glyph', () => {

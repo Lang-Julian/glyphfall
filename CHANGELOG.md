@@ -24,5 +24,9 @@ First release.
 - A headless autoplayer used to measure balance, and `scripts/balance.mjs`,
   which fails CI if the game becomes unwinnable or trivial.
 - `scripts/preview.mjs`, which renders any screen as plain text at any size.
+- Light and dark palettes (`--light` / `--dark`, or a toggle on the title screen
+  that is remembered). The game paints its own background rather than
+  inheriting the terminal's, so text can never end up white-on-white; contrast
+  tests hold every character to a minimum ratio in both appearances.
 
 [0.1.0]: https://github.com/Lang-Julian/glyphfall/releases/tag/v0.1.0

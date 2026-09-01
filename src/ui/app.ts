@@ -7,8 +7,9 @@ import {
 import { clearSave, loadProfile, recordRun, saveProfile, writeSave, type Profile } from '../meta/store.js';
 import { Screen } from './screen.js';
 import { Terminal, type Key } from './term.js';
-import { BOLD, makeTheme, sgr, type ColorLevel, type Theme } from './theme.js';
+import { BOLD, makeTheme, sgr, type Appearance, type ColorLevel, type Theme } from './theme.js';
 import { keyHint, setAsciiMode, truncate } from './draw.js';
+import { relicDef } from '../content/relics.js';
 
 /**
  * The application shell.
@@ -34,6 +35,7 @@ export interface AppOptions {
   depth: number;
   ascii: boolean;
   colorLevel: ColorLevel;
+  appearance: Appearance;
   animations: boolean;
   /** Start straight into a fresh run, skipping the title screen. */
   jumpIn: boolean;
@@ -77,9 +79,10 @@ export class App {
     this.term = new Terminal();
     const size = this.term.size();
     this.screen = new Screen(size.width, size.height);
-    this.theme = makeTheme(opts.colorLevel, !opts.ascii);
+    this.theme = makeTheme(opts.colorLevel, !opts.ascii, opts.appearance);
     setAsciiMode(opts.ascii);
     if (opts.ascii) this.screen.setSanitizer((ch) => this.theme.icon(ch));
+    this.screen.setBaseStyle(this.theme.bg('base'));
     this.profile = loadProfile();
     this.rng = new Rng(opts.seed);
   }
@@ -210,6 +213,17 @@ export class App {
     const x = Math.max(1, Math.floor((s.width - w) / 2));
     const y = s.height - 3;
     s.put(x, y, truncate(text, w), sgr(t.fg('invert'), t.bg('accent'), BOLD));
+  }
+
+  /** Switches between the light and dark palettes and remembers the choice. */
+  setAppearance(appearance: Appearance): void {
+    this.opts = { ...this.opts, appearance };
+    this.theme = makeTheme(this.opts.colorLevel, !this.opts.ascii, appearance);
+    this.screen.setBaseStyle(this.theme.bg('base'));
+    this.screen.invalidate();
+    this.profile = { ...this.profile, settings: { ...this.profile.settings, appearance } };
+    this.saveProfileNow();
+    this.dirty = true;
   }
 
   toast(text: string): void {
@@ -350,11 +364,17 @@ export function drawTopBar(app: App): void {
     sgr(t.fg('dim'), t.bg('panel')));
 
   const hpStyle = sgr(t.fg(run.hp / run.maxHp <= 0.3 ? 'hpLow' : 'hp'), t.bg('panel'), BOLD);
+  // Relics as bare sigils: the names live one keystroke away under `r`, and a
+  // header full of relic names is the single biggest source of screen noise.
+  const sigils = run.relics.map((id) => t.icon(relicDef(id).glyph)).join(' ');
   const right: [string, string][] = [
+    [sigils, sgr(t.fg('accent'), t.bg('panel'))],
     [`hp ${run.hp}/${run.maxHp}`, hpStyle],
     [`${t.glyph('coin')} ${run.gold}`, sgr(t.fg('gold'), t.bg('panel'), BOLD)],
     [`floor ${run.stats.floorsCleared}`, sgr(t.fg('dim'), t.bg('panel'))],
-    [`depth ${run.depth}`, sgr(t.fg('dim'), t.bg('panel'))],
+    ...(run.depth > 0
+      ? [[`depth ${run.depth}`, sgr(t.fg('dim'), t.bg('panel'))] as [string, string]]
+      : []),
   ];
   let rx = s.width - 1;
   for (const [text, style] of right.reverse()) {

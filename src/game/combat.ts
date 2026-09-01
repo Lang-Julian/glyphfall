@@ -455,6 +455,7 @@ export function playCard(
   if (!opts.free) s.energy -= check.cost;
 
   s.hand.splice(handIndex, 1);
+  const chainBefore = s.chain;
   advanceChain(s, d.suit);
 
   s.cardsPlayedThisTurn++;
@@ -462,7 +463,12 @@ export function playCard(
   s.typePlays[d.type] = (s.typePlays[d.type] ?? 0) + 1;
   s.playedThisTurn.push(card);
 
-  say(s, `You play ${cardName(card)}${s.chain > 0 ? ` (chain ${s.chain})` : ''}.`, 'player');
+  // Spelling out what happened to the chain is the cheapest tutorial there is.
+  const chainNote =
+    s.chain > chainBefore ? `  chain ${s.chain}`
+    : chainBefore > 0 && s.chain < chainBefore ? '  chain broken'
+    : s.chain > 0 ? `  chain ${s.chain}` : '';
+  say(s, `You play ${cardName(card)}.${chainNote}`, 'player');
 
   resolveCardBody(s, card, targetIndex);
   fireCardPlayedHooks(s, d.suit, d.type, targetIndex);

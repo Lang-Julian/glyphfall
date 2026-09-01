@@ -62,8 +62,8 @@ you start a turn with the chain already running.
 ## What it looks like
 
 ```
- GLYPHFALL  Act 1/3 · The Upper Shelves         hp 61/78  ¤ 264  floor 2  depth 0
- ∞ First Link  ∞ Chainwright's Glove  ◆ Ember Lens                      Moth & Wisp
+ GLYPHFALL  Act 1/3 · The Upper Shelves           ∞ ∞ ◆  hp 61/78  ¤ 264  floor 2
+                                    Moth & Wisp
 
         Ledger Moth                 Cinder Hound                 Glass Wisp
           \  ^  /                      /\_/\                        ***
@@ -72,13 +72,13 @@ you start a turn with the chain already running.
           /  v  \                      /] [\                         |
     █████████░░░░ 23/32         █████████████ 15/15         █████████████ 18/18
     attacks 5 · blocks 6             attacks 6                   attacks 5
-                                                                   THN 3
+                                                                  Thorns 3
 
 
 
 ────────────────────────────────────────────────────────────────────────────────────
  hp ███████████░░░ 61/78  ◇ ██░ 2   CHAIN █░░░░░░░░ +1  ◆               incoming 16
-                                            turn 1   draw 8 · discard 1 · exhaust 0
+                                               turn 1  ·  8 to draw  ·  1 discarded
  ▲ Ward  1e  Gain 6 block.                                         breaks the chain
      ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐
      │1          ▲│ │1         »◉│ │1          ■│ │1          ▲│ │1         »◆│
@@ -86,7 +86,7 @@ you start a turn with the chain already running.
     ▌│Gain 6      │▐│Deal 8      │ │Gain 1      │ │Gain 4      │ │Deal 14     │   2›
      │block.      │ │damage.…    │ │Strength an…│ │block, plus…│ │damage.     │
      └──── 1 ─────┘ └──── 2 ─────┘ └──── 3 ─────┘ └──── 4 ─────┘ └──── 5 ─────┘
- You play Strike (chain 1).
+ You play Strike.  chain 1
   ←→  card   ↑↓  target   ↵  play   e  end turn   d  inspect   p  draught
 ```
 
@@ -147,6 +147,7 @@ glyphfall --seed ember-lantern-412   # any text works; same seed, same run
 glyphfall --daily                    # today's run, identical for everyone
 glyphfall --depth 4                  # +28% enemy HP, -16 max HP
 glyphfall --continue                 # resume the saved run
+glyphfall --light                    # colours for a light terminal
 ```
 
 Every random decision in a run — the map, shop stock, enemy moves, card offers — flows
@@ -162,6 +163,7 @@ Quitting mid-fight is safe: the run is saved at the start of the floor you are o
 
 | | |
 |---|---|
+| **Light or dark** | the game paints its own background rather than inheriting your terminal's, so text can never come out white-on-white. `--light` / `--dark`, or toggle it from the title screen and it is remembered |
 | **Colour** | truecolor → 256 → 16 → none, detected automatically; honours `NO_COLOR` and `FORCE_COLOR` |
 | **Unicode** | `--ascii` redraws everything with `+ - \|`; only single-width characters are ever used, so no glyph can shear the grid |
 | **Size** | 78×22 minimum, laid out from a fixed budget so nothing ever overlaps or clips; resizes live |

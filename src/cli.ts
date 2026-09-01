@@ -2,7 +2,10 @@ import { dailySeed, normaliseSeed, randomSeed } from './core/seed.js';
 import { validateContent } from './game/run.js';
 import { dataDir, loadProfile, loadSave } from './meta/store.js';
 import { App, type AppOptions } from './ui/app.js';
-import { detectColorLevel, detectUnicode, type ColorLevel } from './ui/theme.js';
+import {
+  detectAppearance, detectColorLevel, detectUnicode,
+  type Appearance, type ColorLevel,
+} from './ui/theme.js';
 import { resumeRun, showTitle, startRun } from './views/flow.js';
 import { version } from './version.js';
 
@@ -22,6 +25,7 @@ interface Args {
   ascii: boolean;
   noColor: boolean;
   noAnim: boolean;
+  appearance?: Appearance;
   resume: boolean;
   help: boolean;
   showVersion: boolean;
@@ -61,6 +65,8 @@ export function parseArgs(argv: readonly string[]): Args {
         break;
       }
       case '--ascii': a.ascii = true; break;
+      case '--light': a.appearance = 'light'; break;
+      case '--dark': a.appearance = 'dark'; break;
       case '--no-color': case '--no-colour': a.noColor = true; break;
       case '--no-anim': case '--no-animation': a.noAnim = true; break;
       case '-c': case '--continue': a.resume = true; a.jumpIn = true; break;
@@ -89,6 +95,8 @@ const HELP = `
         --daily         today's shared seed
     -d, --depth <n>     difficulty, 0-20 (default 0)
     -c, --continue      resume the run in progress
+        --light         colours for a light terminal background
+        --dark          colours for a dark terminal background (default)
         --ascii         no unicode; boxes drawn with + - |
         --no-color      no colour (also honours NO_COLOR)
         --no-anim       no flashes or pulses
@@ -153,9 +161,14 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   const colorLevel: ColorLevel =
     args.noColor || profile.settings.noColor ? 'none' : detectColorLevel();
 
+  const setting = profile.settings.appearance;
+  const appearance: Appearance =
+    args.appearance ?? (setting === 'auto' ? detectAppearance() : setting);
+
   const opts: AppOptions = {
     seed: args.daily ? dailySeed() : args.seed ?? randomSeed(),
     depth: args.depth,
+    appearance,
     ascii: args.ascii || profile.settings.ascii || !detectUnicode(),
     colorLevel,
     animations: !args.noAnim && profile.settings.animations,

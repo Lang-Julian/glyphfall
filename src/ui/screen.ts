@@ -33,6 +33,9 @@ export class Screen {
    * one place on its way into the buffer.
    */
   private sanitize: ((ch: string) => string) | null = null;
+  /** Style applied to any cell written without one, so the game's own
+   *  background covers the terminal's rather than showing through it. */
+  private baseStyle = '';
   private front: Cell[];
   private back: Cell[];
   private dirtyAll = true;
@@ -63,7 +66,13 @@ export class Screen {
     this.dirtyAll = true;
   }
 
-  clear(style = ''): void {
+  /** Sets the style used for blank space and for text written without one. */
+  setBaseStyle(style: string): void {
+    this.baseStyle = style;
+    this.dirtyAll = true;
+  }
+
+  clear(style = this.baseStyle): void {
     const cell: Cell = style ? { ch: ' ', st: style } : BLANK;
     this.back.fill(cell);
   }
@@ -72,10 +81,11 @@ export class Screen {
   put(x: number, y: number, text: string, style = ''): number {
     if (y < 0 || y >= this.height) return x;
     const out = this.sanitize ? [...text].map(this.sanitize).join('') : text;
+    const st = style || this.baseStyle;
     let cx = x;
     for (const ch of out) {
       if (cx >= this.width) break;
-      if (cx >= 0) this.back[y * this.width + cx] = { ch, st: style };
+      if (cx >= 0) this.back[y * this.width + cx] = { ch, st };
       cx++;
     }
     return cx;
@@ -102,7 +112,7 @@ export class Screen {
       for (let i = 0; i < w; i++) {
         const px = x + i, py = y + j;
         if (px < 0 || px >= this.width || py < 0 || py >= this.height) continue;
-        this.back[py * this.width + px] = { ch, st: style };
+        this.back[py * this.width + px] = { ch, st: style || this.baseStyle };
       }
     }
   }
@@ -177,6 +187,12 @@ export class Screen {
   /** Forces the next diff to repaint everything (after a resize or a suspend). */
   invalidate(): void {
     this.dirtyAll = true;
+  }
+
+  /** The SGR parameters at one cell. Used by the contrast tests. */
+  styleAt(x: number, y: number): string {
+    if (x < 0 || x >= this.width || y < 0 || y >= this.height) return '';
+    return (this.back[y * this.width + x] ?? BLANK).st;
   }
 
   /** Plain-text snapshot — used by the golden-frame tests. */

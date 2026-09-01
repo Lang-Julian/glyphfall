@@ -52,8 +52,10 @@ interface Layout {
  */
 function layout(width: number, height: number): Layout {
   const handRows = height >= 31 ? CARD_H_FULL : height >= 27 ? CARD_H_MID : CARD_H_SMALL;
-  const logRows = Math.max(1, Math.min(6, height - 26));
-  const fixed = 2 /* top bar + relic strip */ + 1 /* rule */ + 2 /* player */ +
+  // One line of log by default. A scrolling wall of text is the loudest thing
+  // on a combat screen and the least useful.
+  const logRows = height >= 34 ? 3 : height >= 29 ? 2 : 1;
+  const fixed = 2 /* top bar + encounter line */ + 1 /* rule */ + 2 /* player */ +
                 1 /* card detail */ + handRows + 1 /* key bar */;
   const enemyTop = 2;
   const enemyRows = Math.max(6, height - fixed - logRows);
@@ -114,7 +116,7 @@ export function createCombatView(o: CombatViewOptions): View {
       const L = layout(s.width, s.height);
 
       drawTopBar(app);
-      drawRelicStrip(app, c);
+      drawEncounterLine(app, c);
       drawEnemies(app, c, L, target, cardIndex);
       s.put(0, L.ruleY, t.glyph('h').repeat(s.width), t.fg('borderDim'));
       drawPlayerBar(app, c, L.playerY);
@@ -177,18 +179,10 @@ function cycleTarget(c: CombatState, current: number, delta: number): number {
   return c.enemies.indexOf(next);
 }
 
-function drawRelicStrip(app: App, c: CombatState): void {
+/** One quiet line naming the fight. Relics live as sigils in the header. */
+function drawEncounterLine(app: App, c: CombatState): void {
   const { screen: s, theme: t } = app;
-  const room = s.width - c.encounterName.length - 4;
-  let x = 1;
-  for (const id of c.relics) {
-    const d = relicDef(id);
-    const label = `${t.icon(d.glyph)} ${d.name}`;
-    if (x + label.length + 4 > room) { s.put(x, 1, `+${c.relics.length - c.relics.indexOf(id)}`, t.fg('faint')); break; }
-    x = s.put(x, 1, label, t.fg('accent'));
-    x = s.put(x, 1, '  ');
-  }
-  s.putRight(s.width - 1, 1, c.encounterName, sgr(t.fg('dim'), BOLD));
+  s.putCenter(0, s.width, 1, c.encounterName, sgr(t.fg('dim'), BOLD));
 }
 
 function drawEnemies(
@@ -310,17 +304,21 @@ function drawPlayerBar(app: App, c: CombatState, y: number): void {
   const incoming = incomingDamage(c);
   if (incoming > 0) {
     const through = Math.max(0, incoming - p.block);
-    const label = p.block > 0
-      ? `incoming ${incoming}  ${t.glyph('arrow')} ${through} through`
-      : `incoming ${incoming}`;
+    // "You are about to die" deserves the word, not a colour a player has to
+    // learn to read.
+    const label = through >= p.hp
+      ? `LETHAL — ${through} incoming`
+      : p.block > 0
+        ? `incoming ${incoming}  ${t.glyph('arrow')} ${through} through`
+        : `incoming ${incoming}`;
     s.putRight(s.width - 1, y, label,
       sgr(t.fg(through >= p.hp ? 'hpLow' : through > 0 ? 'bad' : 'good'), BOLD));
   } else {
     s.putRight(s.width - 1, y, 'nothing incoming', t.fg('good'));
   }
-  s.putRight(s.width - 1, y + 1,
-    `turn ${c.turn}   draw ${c.draw.length} ${t.glyph('bullet')} discard ${c.discard.length} ${t.glyph('bullet')} exhaust ${c.exhaust.length}`,
-    t.fg('faint'));
+  const counters = [`turn ${c.turn}`, `${c.draw.length} to draw`, `${c.discard.length} discarded`];
+  if (c.exhaust.length > 0) counters.push(`${c.exhaust.length} exhausted`);
+  s.putRight(s.width - 1, y + 1, counters.join(`  ${t.glyph('bullet')}  `), t.fg('faint'));
 }
 
 /**

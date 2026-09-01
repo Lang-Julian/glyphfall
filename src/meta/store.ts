@@ -30,6 +30,8 @@ export interface Profile {
     noColor: boolean;
     animations: boolean;
     confirmEndTurn: boolean;
+    /** 'auto' asks the terminal; the others are the player's explicit choice. */
+    appearance: 'auto' | 'dark' | 'light';
   };
   /** Most recent finished runs, newest first, capped. */
   history: {
@@ -42,7 +44,10 @@ const EMPTY_PROFILE: Profile = {
   version: 1,
   runs: 0, wins: 0, bestDepth: 0, bestChain: 0, bestFloor: 0,
   totalFightsWon: 0, fastestWinMs: null, dailiesDone: [],
-  settings: { ascii: false, noColor: false, animations: true, confirmEndTurn: false },
+  settings: {
+    ascii: false, noColor: false, animations: true, confirmEndTurn: false,
+    appearance: 'auto',
+  },
   history: [],
 };
 

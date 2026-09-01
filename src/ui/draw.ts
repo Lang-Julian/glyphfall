@@ -256,7 +256,9 @@ export function keyHint(
     // Key captions contain arrows; degrade them like any other content glyph.
     const key = t.icon(rawKey);
     if (cx + key.length + label.length + 3 > s.width) break;
-    cx = s.put(cx, y, ` ${key} `, sgr(t.fg('invert'), t.bg('shade'), BOLD));
+    // High-contrast chip: base-coloured text on the accent, never on a shade
+    // barely distinguishable from it.
+    cx = s.put(cx, y, ` ${key} `, sgr(t.fg('invert'), t.bg('accent'), BOLD));
     cx = s.put(cx, y, ` ${label}`, t.fg('dim'));
     cx = s.put(cx, y, '  ');
   }
