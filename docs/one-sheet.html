@@ -1,0 +1,514 @@
+<title>Glyphfall One-Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap">
+
+<style>
+  /*
+   * Glyphfall one-sheet.
+   *
+   * The product is a terminal game, so the advertisement is a terminal window:
+   * one typeface, monospace, box-drawing rules instead of cards, and a wordmark
+   * built out of the same U+2588 blocks the game draws its own title with. The
+   * palette is the game's dark palette verbatim — the five suit hues are the
+   * only colours on the page.
+   *
+   * Deliberately single-theme. A terminal ad that repaints itself for a light
+   * host would be lying about the thing it is selling, so every colour is
+   * painted explicitly from a token and nothing is inherited from the viewer.
+   */
+  :root {
+    --ground: #141310;
+    --panel: #1a1815;
+    --ink: #ebe7dc;
+    --dim: #928c82;
+    --rule: #4b463f;
+    --rule-lit: #706b62;
+
+    --ember: #ff8a4f;
+    --frost: #7ad2ff;
+    --void: #be9eff;
+    --iron: #ded8cb;
+    --prism: #ffdc78;
+
+    --hp: #ff707a;
+    --good: #8fe78f;
+    --chain: #ffb05c;
+
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  /*
+   * Suit pips and gauge marks are Geometric Shapes, and several of them have
+   * emoji presentation variants. A browser that reaches for the emoji font
+   * renders them at a fixed colour and ignores the palette, so every one of
+   * them is pinned to text presentation — here, and with U+FE0E in the markup.
+   */
+  .stage, .stage * { font-variant-emoji: text; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--mono);
+    display: grid;
+    place-items: center;
+    min-height: 100vh;
+    padding: clamp(8px, 2vmin, 28px);
+  }
+
+  /* The slide is one object: a 16:9 stage whose every measurement is a
+     fraction of its own height, so it scales as a unit rather than reflowing. */
+  .stage {
+    width: min(100%, calc((100vh - 2 * clamp(8px, 2vmin, 28px)) * 16 / 9));
+    aspect-ratio: 16 / 9;
+    container-type: size;
+    position: relative;
+    border: 1px solid var(--rule-lit);
+    background: var(--ground);
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    gap: 2.2cqh;
+    padding: 3.4cqh 3.4cqh 2.8cqh;
+    font-size: 2.05cqh;
+    line-height: 1.45;
+  }
+
+  /* --- the window's own title bar, notched into the top border ------------ */
+  .chrome {
+    position: absolute;
+    inset: 0 3.2cqh auto;
+    top: 0;
+    transform: translateY(-50%);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.85cqh;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim);
+    pointer-events: none;
+  }
+  .chrome span {
+    background: var(--ground);
+    padding: 0 1.2cqh;
+  }
+  .chrome .cmd { color: var(--prism); }
+
+  /* --- masthead ----------------------------------------------------------- */
+  .masthead {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: end;
+    gap: 4cqh;
+  }
+
+  /* The wordmark is not type. It is the game's own block-letter banner,
+     character for character, in the three colour bands the title screen uses. */
+  .wordmark {
+    font-size: 2.28cqh;
+    line-height: 1.02;
+    font-weight: 700;
+    white-space: pre;
+    letter-spacing: 0;
+    margin: 0;
+  }
+  .wordmark i { font-style: normal; display: block; }
+  .wordmark i:nth-child(1),
+  .wordmark i:nth-child(2) { color: var(--ember); }
+  .wordmark i:nth-child(3),
+  .wordmark i:nth-child(4) { color: var(--prism); }
+  .wordmark i:nth-child(5) { color: var(--frost); }
+
+  .pitch {
+    display: grid;
+    gap: 1.1cqh;
+    justify-items: end;
+    text-align: right;
+  }
+  .pitch h1 {
+    margin: 0;
+    font-size: 2.5cqh;
+    font-weight: 500;
+    line-height: 1.35;
+    max-width: 34ch;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+  .pitch h1 em {
+    font-style: normal;
+    color: var(--prism);
+  }
+  .meta {
+    display: flex;
+    gap: 1.4cqh;
+    font-size: 1.8cqh;
+    color: var(--dim);
+    letter-spacing: 0.06em;
+  }
+  .meta b { color: var(--iron); font-weight: 500; }
+
+  /* --- suit strip: the five suits, which is what the game is made of ------ */
+  .suits {
+    display: flex;
+    gap: 3.2cqh;
+    align-items: center;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 1.2cqh 0;
+    font-size: 1.85cqh;
+    letter-spacing: 0.1em;
+  }
+  .suits div { display: flex; gap: 0.7cqh; align-items: baseline; }
+  .suits b { font-weight: 800; font-size: 2.3cqh; }
+  .suits span { color: var(--dim); text-transform: uppercase; }
+  .s-ember b { color: var(--ember); }
+  .s-frost b { color: var(--frost); }
+  .s-void  b { color: var(--void); }
+  .s-iron  b { color: var(--iron); }
+  .s-prism b { color: var(--prism); }
+  .suits .note { margin-left: auto; color: var(--dim); text-transform: none; letter-spacing: 0; }
+
+  /* --- the two panels ----------------------------------------------------- */
+  .panels {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 3cqh;
+    min-height: 0;
+  }
+  .column {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 3cqh;
+    min-height: 0;
+  }
+
+  /* --- the three characters ---------------------------------------------- */
+  .cast { display: grid; gap: 1.1cqh; font-size: 1.72cqh; }
+  .cast article {
+    display: grid;
+    grid-template-columns: 15ch 6ch 1fr;
+    column-gap: 1.4cqh;
+    align-items: baseline;
+  }
+  .cast h3 { margin: 0; font-size: 1.72cqh; font-weight: 700; }
+  .cast .hp {
+    color: var(--dim);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .cast p { margin: 0; color: var(--dim); }
+  .c-warden h3 { color: var(--frost); }
+  .c-archivist h3 { color: var(--prism); }
+  .c-kindler h3 { color: var(--ember); }
+
+  .panel {
+    position: relative;
+    border: 1px solid var(--rule);
+    padding: 3cqh 2.4cqh 2.4cqh;
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    align-content: start;
+    gap: 1.6cqh;
+  }
+  .panel > *:not(.label) { min-width: 0; }
+  .panel > .shot { min-height: 0; }
+  .panel > .label {
+    position: absolute;
+    top: 0;
+    left: 1.6cqh;
+    transform: translateY(-50%);
+    background: var(--ground);
+    padding: 0 1cqh;
+    font-size: 1.7cqh;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  /* --- the screenshot: a real render, coloured, not a mock ---------------- */
+  .shot {
+    font-size: 1.6cqh;
+    line-height: 1.2;
+    white-space: pre;
+    overflow: hidden;
+    color: var(--iron);
+    margin: 0;
+  }
+
+  /* --- the rule panel ----------------------------------------------------- */
+  .rule-copy {
+    margin: 0;
+    font-size: 2cqh;
+    line-height: 1.5;
+    color: var(--ink);
+    max-width: 40ch;
+  }
+  .rule-copy b { color: var(--chain); font-weight: 700; }
+  .rule-copy span { color: var(--dim); }
+
+  table.arith {
+    width: 100%;
+    margin-top: 0.6cqh;
+    border-collapse: collapse;
+    font-size: 1.85cqh;
+    font-variant-numeric: tabular-nums;
+  }
+  table.arith th {
+    text-align: right;
+    font-weight: 500;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 1.6cqh;
+    padding: 0 0 0.7cqh 1.6cqh;
+    border-bottom: 1px solid var(--rule);
+  }
+  table.arith th:first-child { text-align: left; }
+  table.arith td {
+    padding: 0.85cqh 0 0 1.6cqh;
+    text-align: right;
+    color: var(--dim);
+  }
+  table.arith td:first-child {
+    text-align: left;
+    padding-left: 0;
+    color: var(--ink);
+  }
+  table.arith .hot {
+    color: var(--chain);
+    font-weight: 800;
+    font-size: 2.4cqh;
+  }
+  table.arith .cold { color: var(--dim); }
+
+  /* --- the census: the numbers, on one baseline -------------------------- */
+  .census {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .census div {
+    padding: 1.5cqh 1cqh;
+    display: grid;
+    gap: 0.3cqh;
+    border-left: 1px solid var(--rule);
+  }
+  .census div:first-child { border-left: 0; padding-left: 0; }
+  .census b {
+    font-size: 3.9cqh;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--prism);
+    font-variant-numeric: tabular-nums;
+  }
+  .census span {
+    font-size: 1.65cqh;
+    color: var(--dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .census .zero b { color: var(--good); }
+
+  /* --- the prompt --------------------------------------------------------- */
+  .prompt {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 3cqh;
+    font-size: 2.35cqh;
+  }
+  .prompt .cmd { color: var(--ink); font-weight: 700; }
+  .prompt .cmd i { font-style: normal; color: var(--good); font-weight: 500; }
+  .prompt .where { color: var(--dim); font-size: 1.9cqh; }
+  .prompt .where b { color: var(--frost); font-weight: 500; }
+
+  .caret {
+    display: inline-block;
+    width: 0.62em;
+    height: 1.05em;
+    translate: 0 0.12em;
+    background: var(--prism);
+    animation: blink 1.05s steps(1, end) infinite;
+  }
+  @keyframes blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
+
+  /* The chain meter fills once, the way it does when a chain builds. */
+  .meter b {
+    display: inline-block;
+    animation: light 0.14s ease-out backwards;
+  }
+  .meter b:nth-child(1) { animation-delay: 0.30s; }
+  .meter b:nth-child(2) { animation-delay: 0.44s; }
+  .meter b:nth-child(3) { animation-delay: 0.58s; }
+  .meter b:nth-child(4) { animation-delay: 0.72s; }
+  @keyframes light { from { color: var(--rule); } to { color: var(--chain); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .caret { animation: none; }
+    .meter b { animation: none; }
+  }
+
+  /* Below roughly 640px the stage's own type would fall under 9px, so the
+     slide stops pretending to be a slide and stacks into a readable column. */
+  @media (max-width: 640px) {
+    .stage {
+      aspect-ratio: auto;
+      width: 100%;
+      font-size: 13px;
+      gap: 18px;
+      padding: 26px 16px 20px;
+      container-type: normal;
+    }
+    .chrome { font-size: 11px; }
+    .masthead { grid-template-columns: 1fr; align-items: start; gap: 16px; }
+    .pitch { justify-items: start; text-align: left; }
+    .pitch h1 { font-size: 19px; }
+    .meta { flex-wrap: wrap; gap: 10px; font-size: 12px; }
+    .wordmark { font-size: 9px; }
+    .suits { flex-wrap: wrap; gap: 14px; font-size: 12px; }
+    .suits b { font-size: 15px; }
+    .suits .note { margin-left: 0; flex-basis: 100%; }
+    .panels { grid-template-columns: 1fr; gap: 20px; }
+    .panel { padding: 22px 14px 16px; gap: 12px; }
+    .panel > .label { font-size: 11px; left: 12px; padding: 0 8px; }
+    .shot { font-size: 8.4px; line-height: 1.32; overflow-x: auto; }
+    .rule-copy { font-size: 14px; }
+    table.arith { font-size: 13px; }
+    table.arith .hot { font-size: 17px; }
+    .census { grid-template-columns: repeat(4, 1fr); }
+    .census div { padding: 10px 8px; }
+    .census div:nth-child(5) { border-left: 0; padding-left: 0; }
+    .census b { font-size: 24px; }
+    .census span { font-size: 11px; }
+    .prompt { flex-direction: column; align-items: flex-start; gap: 8px; font-size: 16px; }
+    .prompt .where { font-size: 13px; }
+  }
+</style>
+
+<main class="stage">
+  <div class="chrome">
+    <span>glyphfall 0.2.0 &nbsp;·&nbsp; MIT</span>
+    <span class="cmd">npx glyphfall</span>
+  </div>
+
+  <header class="masthead">
+    <p class="wordmark" aria-label="Glyphfall"><i> █████  ██      ██   ██ ██████  ██   ██ ███████   ███   ██      ██</i><i>██      ██       ██ ██  ██   ██ ██   ██ ██       ██ ██  ██      ██</i><i>██  ███ ██        ███   ██████  ███████ █████   ███████ ██      ██</i><i>██   ██ ██         ██   ██      ██   ██ ██      ██   ██ ██      ██</i><i> █████  ███████    ██   ██      ██   ██ ██      ██   ██ ███████ ███████</i></p>
+    <div class="pitch">
+      <h1>A roguelike deckbuilder that lives in your terminal — about <em>the order you do things in</em>.</h1>
+      <p class="meta">
+        <span><b>0</b> dependencies</span><span aria-hidden="true">·</span>
+        <span><b>140</b> tests</span><span aria-hidden="true">·</span>
+        <span>Node <b>≥&nbsp;20</b></span><span aria-hidden="true">·</span>
+        <span>mac · linux · windows</span>
+      </p>
+    </div>
+  </header>
+
+  <section class="suits" aria-label="The five suits">
+    <div class="s-ember"><b>◆︎</b><span>ember</span></div>
+    <div class="s-frost"><b>▲︎</b><span>frost</span></div>
+    <div class="s-void"><b>●︎</b><span>void</span></div>
+    <div class="s-iron"><b>■︎</b><span>iron</span></div>
+    <div class="s-prism"><b>◉︎</b><span>prism</span></div>
+    <span class="note">five suits · one rule · every card in the game hangs off it</span>
+  </section>
+
+  <div class="panels">
+    <section class="panel">
+      <span class="label">Act 1 · floor 2 · Moth &amp; Wisp</span>
+      <pre class="shot" aria-label="A combat screen, generated from the game's own framebuffer">
+<!-- shot:start -->
+<span style="">      </span><span style="color:#141310;background:#ff7676;font-weight:700"> Ledger Moth </span><span style="">              </span><span style="color:#ebe7dc">Cinder Hound</span><span style="">               </span><span style="color:#ebe7dc">Glass Wisp</span>
+<span style="">        </span><span style="color:#ff7676"> \  ^  / </span><span style="">                 </span><span style="color:#ded8cb">  /\_/\  </span><span style="">                 </span><span style="color:#ded8cb">   ***</span>
+<span style="">        </span><span style="color:#ff7676">  \/|\/  </span><span style="">                 </span><span style="color:#ded8cb"> ( &gt;.&lt; ) </span><span style="">                 </span><span style="color:#ded8cb">  * o *</span>
+<span style="">        </span><span style="color:#ff7676">  /\|/\  </span><span style="">                 </span><span style="color:#ded8cb">  \___/  </span><span style="">                 </span><span style="color:#ded8cb">   ***</span>
+<span style="">        </span><span style="color:#ff7676"> / </span><span style="color:#141310;background:#ff8a4f;font-weight:700"> -9 </span><span style="color:#ff7676">\ </span><span style="">                 </span><span style="color:#ded8cb">  /] [\  </span><span style="">                 </span><span style="color:#ded8cb">    |</span>
+<span style="">  </span><span style="color:#ff707a">███████████</span><span style="color:#5c5850">░░░░</span><span style=""> </span><span style="color:#ff707a;font-weight:700">23/32</span><span style="">     </span><span style="color:#ff707a">███████████████</span><span style=""> </span><span style="color:#ff707a;font-weight:700">15/15</span><span style="">     </span><span style="color:#ff707a">███████████████</span><span style=""> </span><span style="color:#ff707a;font-weight:700">18/18</span>
+<span style="">   </span><span style="color:#ff7676;font-weight:700">attacks 5 · blocks 6</span><span style="">           </span><span style="color:#ff7676;font-weight:700">attacks 6</span><span style="">                 </span><span style="color:#ff7676;font-weight:700">attacks 5</span>
+<span style="">                                                             </span><span style="color:#ffbb64">Thorns 3</span>
+
+<span style="color:#706b62">──────────────────────────────────────────────────────────────────────────────</span>
+<span style=""> </span><span style="color:#ff707a">hp ███████████</span><span style="color:#5c5850">░░░</span><span style=""> </span><span style="color:#ff707a;font-weight:700">61/78</span><span style="">  </span><span style="color:#928c82">⊕ 0  </span><span style="color:#ffd670">◇ </span><span style="color:#ffd670;font-weight:700">██</span><span style="color:#5c5850">░</span><span style="color:#ffd670;font-weight:700"> 2   </span><span style="color:#ffb05c;font-weight:700">CHAIN █</span><span style="color:#5c5850">░░░░░░░░</span><span style="color:#ffb05c;font-weight:700"> +1</span><span style="color:#ff8a4f">  ◆</span><span style="">    </span><span style="color:#ff7676;font-weight:700">incoming 16</span>
+<span style="">                                         </span><span style="color:#928c82">turn 1  ·  8 to draw  ·  1 discarded</span>
+<span style=""> </span><span style="color:#7ad2ff">▲</span><span style=""> </span><span style="color:#fff5e1;font-weight:700">Ward</span><span style="color:#ffd670">  1e  </span><span style="color:#ebe7dc">Gain 6 block.</span><span style="">                                   </span><span style="color:#ff7676;font-weight:700">breaks the chain</span>
+<span style="">         </span><span style="color:#fff5e1;font-weight:700">┌────────────┐</span><span style=""> </span><span style="color:#ffdc78">┌────────────┐</span><span style=""> </span><span style="color:#ded8cb">┌────────────┐</span><span style=""> </span><span style="color:#7ad2ff">┌────────────┐</span>
+<span style="">         </span><span style="color:#fff5e1;font-weight:700">│</span><span style="color:#ffd670;font-weight:700">1</span><span style="background:#211f1b">          </span><span style="color:#7ad2ff">▲</span><span style="color:#fff5e1;font-weight:700">│</span><span style=""> </span><span style="color:#ffdc78">│</span><span style="color:#ffd670;font-weight:700">1</span><span style="background:#211f1b">         </span><span style="color:#ffb05c;font-weight:700">»</span><span style="color:#ffdc78">◉│</span><span style=""> </span><span style="color:#ded8cb">│</span><span style="color:#ffd670;font-weight:700">1</span><span style="background:#211f1b">          </span><span style="color:#ded8cb">■│</span><span style=""> </span><span style="color:#7ad2ff">│</span><span style="color:#ffd670;font-weight:700">1</span><span style="background:#211f1b">          </span><span style="color:#7ad2ff">▲│</span>
+<span style="">         </span><span style="color:#fff5e1;font-weight:700">│</span><span style="background:#211f1b">    </span><span style="color:#ebe7dc;font-weight:700">Ward</span><span style="background:#211f1b">    </span><span style="color:#fff5e1;font-weight:700">│</span><span style=""> </span><span style="color:#ffdc78">│</span><span style="color:#ebe7dc;font-weight:700">Prism Shard</span><span style="background:#211f1b"> </span><span style="color:#ffdc78">│</span><span style=""> </span><span style="color:#ded8cb">│</span><span style="background:#211f1b">   </span><span style="color:#ebe7dc;font-weight:700">Temper</span><span style="background:#211f1b">   </span><span style="color:#ded8cb">│</span><span style=""> </span><span style="color:#7ad2ff">│</span><span style="background:#211f1b"> </span><span style="color:#ebe7dc;font-weight:700">Hoarfrost</span><span style="background:#211f1b">  </span><span style="color:#7ad2ff">│</span>
+<span style="">        </span><span style="color:#fff5e1;font-weight:700">▌│</span><span style="color:#ada79c">Gain 6</span><span style="background:#211f1b">      </span><span style="color:#fff5e1;font-weight:700">│▐</span><span style="color:#ffdc78">│</span><span style="color:#ada79c">Deal 8</span><span style="background:#211f1b">      </span><span style="color:#ffdc78">│</span><span style=""> </span><span style="color:#ded8cb">│</span><span style="color:#ada79c">Gain 1</span><span style="background:#211f1b">      </span><span style="color:#ded8cb">│</span><span style=""> </span><span style="color:#7ad2ff">│</span><span style="color:#ada79c">Gain 4</span><span style="background:#211f1b">      </span><span style="color:#7ad2ff">│</span><span style="">        </span><span style="color:#ffdc78;font-weight:700">3›</span>
+<span style="">         </span><span style="color:#fff5e1;font-weight:700">│</span><span style="color:#ada79c">block.</span><span style="background:#211f1b">      </span><span style="color:#fff5e1;font-weight:700">│</span><span style=""> </span><span style="color:#ffdc78">│</span><span style="color:#ada79c">damage.…</span><span style="background:#211f1b">    </span><span style="color:#ffdc78">│</span><span style=""> </span><span style="color:#ded8cb">│</span><span style="color:#ada79c">Strength an…</span><span style="color:#ded8cb">│</span><span style=""> </span><span style="color:#7ad2ff">│</span><span style="color:#ada79c">block, plus…</span><span style="color:#7ad2ff">│</span>
+<span style="">         </span><span style="color:#fff5e1;font-weight:700">└──── 1 ─────┘</span><span style=""> </span><span style="color:#ffdc78">└────</span><span style="color:#ada79c;font-weight:700"> 2 </span><span style="color:#ffdc78">─────┘</span><span style=""> </span><span style="color:#ded8cb">└────</span><span style="color:#ada79c;font-weight:700"> 3 </span><span style="color:#ded8cb">─────┘</span><span style=""> </span><span style="color:#7ad2ff">└────</span><span style="color:#ada79c;font-weight:700"> 4 </span><span style="color:#7ad2ff">─────┘</span>
+<span style=""> </span><span style="color:#928c82">— Moth &amp; Wisp —</span>
+<span style=""> </span><span style="color:#ebe7dc">You play Strike.  chain 1</span>
+<span style="background:#211f1b"> </span><span style="color:#141310;background:#ffdc78;font-weight:700"> ←→ </span><span style="color:#ada79c"> card</span><span style="">  </span><span style="color:#141310;background:#ffdc78;font-weight:700"> ↑↓ </span><span style="color:#ada79c"> target</span><span style="">  </span><span style="color:#141310;background:#ffdc78;font-weight:700"> ↵ </span><span style="color:#ada79c"> play</span><span style="">  </span><span style="color:#141310;background:#ffdc78;font-weight:700"> e </span><span style="color:#ada79c"> end turn</span><span style="">  </span><span style="color:#141310;background:#ffdc78;font-weight:700"> ? </span><span style="color:#ada79c"> more</span>
+<!-- shot:end -->
+</pre>
+    </section>
+
+    <div class="column">
+    <section class="panel">
+      <span class="label">The one rule</span>
+      <p class="rule-copy">
+        Play a card whose suit matches the previous card this turn and your
+        <b>chain</b> grows. Break the match and it collapses.
+        <span>Every point of chain adds <b>+1</b> to <b>each instance</b> of damage or block.</span>
+      </p>
+      <table class="arith">
+        <thead>
+          <tr><th scope="col">The same two cards</th><th scope="col">chain 0</th><th scope="col">chain 4</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Deal 7 damage</td>
+            <td class="cold">7</td>
+            <td class="hot">11</td>
+          </tr>
+          <tr>
+            <td>Deal 3 damage <em>twice</em></td>
+            <td class="cold">6</td>
+            <td class="hot">14</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <span class="label">Three ways in</span>
+      <div class="cast">
+        <article class="c-warden">
+          <h3>The Warden</h3><span class="hp">86 HP</span>
+          <p>outlast, then weaponise the wall</p>
+        </article>
+        <article class="c-archivist">
+          <h3>The Archivist</h3><span class="hp">78 HP</span>
+          <p>the chain, learned properly</p>
+        </article>
+        <article class="c-kindler">
+          <h3>The Kindler</h3><span class="hp">72 HP</span>
+          <p>long ember chains, thin margins</p>
+        </article>
+      </div>
+    </section>
+    </div>
+  </div>
+
+  <section class="census" aria-label="What is in the game">
+    <div><b data-census="characters">3</b><span>characters</span></div>
+    <div><b data-census="bosses">9</b><span>bosses</span></div>
+    <div><b data-census="cards">59</b><span>cards</span></div>
+    <div><b data-census="relics">27</b><span>relics</span></div>
+    <div><b data-census="encounters">37</b><span>encounters</span></div>
+    <div><b data-census="events">18</b><span>events</span></div>
+    <div><b>21</b><span>difficulties</span></div>
+    <div class="zero"><b>0</b><span>dependencies</span></div>
+  </section>
+
+  <footer class="prompt">
+    <span class="cmd"><i>$</i> npx glyphfall<span class="caret" aria-hidden="true"></span></span>
+    <span class="where">three acts · nine bosses · one rule &nbsp;·&nbsp; <b>github.com/Lang-Julian/glyphfall</b></span>
+  </footer>
+</main>

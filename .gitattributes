@@ -1,0 +1,6 @@
+# Normalise line endings in the repository so a Windows checkout cannot turn a
+# diff into a whole-file rewrite, and the test suite reads the same bytes
+# everywhere. The PNG and the compiled artefacts stay binary.
+* text=auto eol=lf
+*.png binary
+*.ico binary

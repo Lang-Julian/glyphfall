@@ -1,10 +1,11 @@
-```
- █████  ██      ██   ██ ██████  ██   ██ ███████   ███   ██      ██
-██      ██       ██ ██  ██   ██ ██   ██ ██       ██ ██  ██      ██
-██  ███ ██        ███   ██████  ███████ █████   ███████ ██      ██
-██   ██ ██         ██   ██      ██   ██ ██      ██   ██ ██      ██
- █████  ███████    ██   ██      ██   ██ ██      ██   ██ ███████ ███████
-```
+<p align="center">
+  <a href="https://github.com/Lang-Julian/glyphfall">
+    <img
+      src="https://raw.githubusercontent.com/Lang-Julian/glyphfall/main/docs/one-sheet.png"
+      alt="glyphfall — a roguelike deckbuilder that lives in your terminal. Three characters, nine bosses, 59 cards, and one rule: play a card whose suit matches the previous card and your chain grows."
+      width="960">
+  </a>
+</p>
 
 **A roguelike deckbuilder that lives in your terminal — about the order you do things in.**
 
