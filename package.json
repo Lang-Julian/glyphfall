@@ -44,8 +44,8 @@
     "start": "npm run build --silent && node dist/cli.js",
     "play": "npm run build --silent && node dist/cli.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsc -p tsconfig.test.json && node --test dist-test/test/",
-    "test:fast": "tsc -p tsconfig.test.json && node --test dist-test/test/",
+    "test": "tsc -p tsconfig.test.json && node scripts/test.mjs",
+    "test:fast": "tsc -p tsconfig.test.json && node scripts/test.mjs",
     "lint": "npm run typecheck",
     "clean": "rm -rf dist dist-test",
     "prepublishOnly": "npm run clean && npm run build && npm run test:fast"
