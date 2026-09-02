@@ -48,7 +48,8 @@
     "test:fast": "tsc -p tsconfig.test.json && node scripts/test.mjs",
     "lint": "npm run typecheck",
     "clean": "rm -rf dist dist-test",
-    "prepublishOnly": "npm run clean && npm run build && npm run test:fast"
+    "prepublishOnly": "npm run clean && npm run build && npm run test:fast",
+    "one-sheet": "npm run build --silent && node scripts/one-sheet.mjs --png"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

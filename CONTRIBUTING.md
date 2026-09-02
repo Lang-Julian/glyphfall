@@ -77,6 +77,16 @@ node scripts/preview.mjs 80 24 map
 
 Check any layout change at **80×24** as well as wide, and with `--ascii`.
 
+The promotional one-sheet is generated from the same harness:
+
+```sh
+npm run one-sheet     # rewrites docs/one-sheet.html and docs/one-sheet.png
+```
+
+Its screenshot reads the colour of every cell out of a real framebuffer and its
+numbers come from the content tables, so it cannot advertise something the game
+does not do. Regenerate it whenever the content counts change.
+
 Two hard rules for anything drawn:
 
 1. **Single-width characters only.** Latin-1, Arrows, Math Operators, Box
