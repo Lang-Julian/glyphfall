@@ -287,7 +287,7 @@ lets a run save mid-fight, lets the tests assert exact numbers, and lets the aut
 clone a fight and explore it.
 
 ```sh
-npm test                      # 100+ tests, no network, no fixtures
+npm test                      # 140 tests, no network, no fixtures
 npm run typecheck
 node scripts/preview.mjs 100 30 combat   # render any screen as plain text
 ```
